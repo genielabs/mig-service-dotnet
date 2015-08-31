@@ -99,8 +99,8 @@ namespace MIG
         //public event -- ServiceStopped;
 
         // TODO: use List instead of Dictionary...
-        public readonly Dictionary<string, MigGateway> Gateways;
-        public readonly Dictionary<string, MigInterface> Interfaces;
+        public readonly List<MigGateway> Gateways;
+        public readonly List<MigInterface> Interfaces;
 
         #endregion
 
@@ -108,8 +108,8 @@ namespace MIG
 
         public MigService()
         {
-            Interfaces = new Dictionary<string, MigInterface>();
-            Gateways = new Dictionary<string, MigGateway>();
+            Interfaces = new List<MigInterface>();
+            Gateways = new List<MigGateway>();
             configuration = new MigServiceConfiguration();
             dynamicApi = new DynamicApi();
         }
@@ -124,7 +124,7 @@ namespace MIG
             try
             {
                 // Start MIG Gateways
-                foreach (var gw in Gateways.Values)
+                foreach (var gw in Gateways)
                 {
                     Log.Debug("Starting Gateway {0}", gw.GetName());
                     if (!gw.Start())
@@ -161,12 +161,12 @@ namespace MIG
         public void StopService()
         {
             Log.Debug("Stopping MigService");
-            foreach (var migInterface in Interfaces.Values)
+            foreach (var migInterface in Interfaces)
             {
                 Log.Debug("Disposing Interface {0}", migInterface.GetDomain());
                 migInterface.Disconnect();
             }
-            foreach (var gw in Gateways.Values)
+            foreach (var gw in Gateways)
             {
                 Log.Debug("Disposing Gateway {0}", gw.GetName());
                 // TODO: gw.Stop();
@@ -205,6 +205,16 @@ namespace MIG
         }
 
         /// <summary>
+        /// Gets the gateway.
+        /// </summary>
+        /// <returns>The gateway.</returns>
+        /// <param name="className">Class name.</param>
+        public MigGateway GetGateway(string className)
+        {
+            return Gateways.Find(gw => gw.GetName().Equals(className));
+        }
+
+        /// <summary>
         /// Adds the gateway.
         /// </summary>
         /// <returns>The gateway.</returns>
@@ -212,47 +222,53 @@ namespace MIG
         /// <param name="assemblyName">Assembly name.</param>
         public MigGateway AddGateway(string className, string assemblyName = "")
         {
-            MigGateway gateway = null;
-            if (!Gateways.ContainsKey(className))
+            MigGateway migGateway = GetGateway(className);
+            if (migGateway == null)
             {
                 try
                 {
                     var type = Type.GetType("MIG.Gateways." + className + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + assemblyName));
-                    gateway = (MigGateway)Activator.CreateInstance(type);
+                    migGateway = (MigGateway)Activator.CreateInstance(type);
                 }
                 catch (Exception e)
                 {
                     MigService.Log.Error(e);
                 }
-                if (gateway != null)
+                if (migGateway != null)
                 {
-                    Log.Debug("Adding Gateway {0}", gateway.GetName());
-                    Gateways.Add(className, gateway);
-                    gateway.PreProcessRequest += Gateway_PreProcessRequest;
-                    gateway.PostProcessRequest += Gateway_PostProcessRequest;
+                    Log.Debug("Adding Gateway {0}", migGateway.GetName());
+                    Gateways.Add(migGateway);
+                    migGateway.PreProcessRequest += Gateway_PreProcessRequest;
+                    migGateway.PostProcessRequest += Gateway_PostProcessRequest;
                 }
             }
-            else
-            {
-                gateway = Gateways[className];
-            }
             // Try loading gateway settings from MIG configuration
-            var config = configuration.GetGateway(gateway.GetName());
+            var config = configuration.GetGateway(migGateway.GetName());
             if (config == null)
             {
                 config = new Gateway();
-                config.Name = gateway.GetName();
+                config.Name = migGateway.GetName();
                 config.Options = new List<ConfigurationOption>();
                 configuration.Gateways.Add(config);
             }
             Log.Debug("Setting Gateway options");
-            gateway.Options = configuration.GetGateway(gateway.GetName()).Options;
-            foreach (var opt in gateway.Options)
+            migGateway.Options = configuration.GetGateway(migGateway.GetName()).Options;
+            foreach (var opt in migGateway.Options)
             {
-                Log.Debug("{0}: {1}={2}", gateway.GetName(), opt.Name, opt.Value);
-                gateway.SetOption(opt.Name, opt.Value);
+                Log.Debug("{0}: {1}={2}", migGateway.GetName(), opt.Name, opt.Value);
+                migGateway.SetOption(opt.Name, opt.Value);
             }
-            return gateway;
+            return migGateway;
+        }
+
+        /// <summary>
+        /// Gets the interface.
+        /// </summary>
+        /// <returns>The interface.</returns>
+        /// <param name="domain">Domain.</param>
+        public MigInterface GetInterface(string domain)
+        {
+            return Interfaces.Find(iface => iface.GetDomain().Equals(domain));
         }
 
         /// <summary>
@@ -263,8 +279,8 @@ namespace MIG
         /// <param name="assemblyName">Assembly name.</param>
         public MigInterface AddInterface(string domain, string assemblyName = "")
         {
-            MigInterface migInterface = null;
-            if (!Interfaces.ContainsKey(domain))
+            MigInterface migInterface = GetInterface(domain);
+            if (migInterface == null)
             {
                 try
                 {
@@ -278,14 +294,10 @@ namespace MIG
                 if (migInterface != null)
                 {
                     Log.Debug("Adding Interface {0}", migInterface.GetDomain());
-                    Interfaces.Add(domain, migInterface);
+                    Interfaces.Add(migInterface);
                     migInterface.InterfaceModulesChanged += MigService_InterfaceModulesChanged;
                     migInterface.InterfacePropertyChanged += MigService_InterfacePropertyChanged;
                 }
-            }
-            else
-            {
-                migInterface = Interfaces[domain];
             }
             // Try loading interface settings from MIG configuration
             var config = configuration.GetInterface(domain);
@@ -317,7 +329,7 @@ namespace MIG
                 Log.Debug("Removing Interface {0}", domain);
                 migInterface.InterfaceModulesChanged -= MigService_InterfaceModulesChanged;
                 migInterface.InterfacePropertyChanged -= MigService_InterfacePropertyChanged;
-                Interfaces.Remove(domain);
+                Interfaces.Remove(migInterface);
                 configuration.GetInterface(domain).IsEnabled = false;
             }
             else
@@ -333,11 +345,10 @@ namespace MIG
         /// <param name="domain">Domain.</param>
         public MigInterface EnableInterface(string domain)
         {
-            MigInterface migInterface = null;
-            if (Interfaces.ContainsKey(domain))
+            MigInterface migInterface = GetInterface(domain);
+            if (migInterface != null)
             {
                 Log.Debug("Enabling Interface {0}", domain);
-                migInterface = Interfaces[domain];
                 migInterface.IsEnabled = true;
                 migInterface.Connect();
             }
@@ -355,11 +366,10 @@ namespace MIG
         /// <param name="domain">Domain.</param>
         public MigInterface DisableInterface(string domain)
         {
-            MigInterface migInterface = null;
-            if (Interfaces.ContainsKey(domain))
+            MigInterface migInterface = GetInterface(domain);
+            if (migInterface != null)
             {
                 Log.Debug("Disabling Interface {0}", domain);
-                migInterface = Interfaces[domain];
                 migInterface.IsEnabled = false;
                 migInterface.Disconnect();
                 configuration.GetInterface(domain).IsEnabled = false;
@@ -515,13 +525,17 @@ namespace MIG
                 case "IsEnabled.Set":
                     if (command.GetOption(0) == "1")
                     {
-                        EnableInterface(command.Address);
-                        request.ResponseData = new ResponseStatus(Status.Ok, "Interface enabled");
+                        if (EnableInterface(command.Address) != null)
+                            request.ResponseData = new ResponseStatus(Status.Ok, "Interface enabled");
+                        else
+                            request.ResponseData = new ResponseStatus(Status.Error, "Interface not found");
                     }
                     else
                     {
-                        DisableInterface(command.Address);
-                        request.ResponseData = new ResponseStatus(Status.Ok, "Interface disabled");
+                        if (DisableInterface(command.Address) != null)
+                            request.ResponseData = new ResponseStatus(Status.Ok, "Interface disabled");
+                        else
+                            request.ResponseData = new ResponseStatus(Status.Error, "Interface not found");
                     }
                     OnInterfacePropertyChanged(new InterfacePropertyChangedEventArgs("MIGService.Interfaces", command.Address, "MIG Interface", "Status.IsEnabled", command.GetOption(0)));
                     break;
@@ -529,13 +543,33 @@ namespace MIG
                     request.ResponseData = new ResponseText(configuration.GetInterface(command.Address).IsEnabled ? "1" : "0");
                     break;
                 case "Options.Set":
-                    Interfaces[command.Address].SetOption(command.GetOption(0), command.GetOption(1));
-                    request.ResponseData = new ResponseStatus(Status.Ok, String.Format("Option '{0}' set to '{1}'", command.GetOption(0), command.GetOption(1)));
+                    {
+                        var iface = GetInterface(command.Address);
+                        if (iface != null)
+                        {
+                            iface.SetOption(command.GetOption(0), command.GetOption(1));
+                            request.ResponseData = new ResponseStatus(Status.Ok, String.Format("Option '{0}' set to '{1}'", command.GetOption(0), command.GetOption(1)));
+                        }
+                        else
+                        {
+                            request.ResponseData = new ResponseStatus(Status.Error, "Interface not found");
+                        }
+                    }
                     OnInterfacePropertyChanged(new InterfacePropertyChangedEventArgs("MIGService.Interfaces", command.Address, "MIG Interface", "Options." + command.GetOption(0), command.GetOption(1)));
                     break;
                 case "Options.Get":
-                    string optionValue = Interfaces[command.Address].GetOption(command.GetOption(0)).Value;
-                    request.ResponseData = new ResponseText(optionValue);
+                    {
+                        var iface = GetInterface(command.Address);
+                        if (iface != null)
+                        {
+                            string optionValue = iface.GetOption(command.GetOption(0)).Value;
+                            request.ResponseData = new ResponseText(optionValue);
+                        }
+                        else
+                        {
+                            request.ResponseData = new ResponseStatus(Status.Error, "Interface not found");
+                        }
+                    }
                     break;
                 default:
                     break;
@@ -544,7 +578,7 @@ namespace MIG
             else
             {
                 // Try processing as MigInterface Api or Web Service Dynamic Api
-                var iface = (from miginterface in Interfaces.Values
+                var iface = (from miginterface in Interfaces
                     let ns = miginterface.GetType().Namespace
                     let domain = ns.Substring(ns.LastIndexOf(".") + 1) + "." + miginterface.GetType().Name
                     where (command.Domain != null && command.Domain.StartsWith(domain))
@@ -615,7 +649,7 @@ namespace MIG
                 InterfacePropertyChanged(this, args);
             }
             // Route event to MIG.Gateways as well
-            foreach (var gateway in Gateways.Values)
+            foreach (var gateway in Gateways)
                 gateway.OnInterfacePropertyChanged(this, args);
         }
 
