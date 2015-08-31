@@ -74,7 +74,7 @@ $.get('http://localhost/api/myapp/demo/greet/Foo+Bar', function(res) { ... });
 ```
 or by using the websocket client connection
 ```
-wsclient.send('myapp/demo/greet/Foo+Bar');
+wsclient.send('myapp/demo/greet/Foo Bar');
 ```
 
 ## MIG Gateways
@@ -155,19 +155,16 @@ For a list of currently implemented interfaces see the [MIG API](http://www.home
 ```
 /api/<api_domain>/<module_address>/<command>[/<option_0>/.../<option_n>]
 ```
-Where **<api_domain>** is used to address a specific API domain, **<module_address>** the target module of the API **<command>**
-and **<option_0>...<option_n>** are optional parameters that the **<command>** may require. 
+Where ```<api_domain>``` is used to address a specific API domain, ```<module_address>``` the target module of the API ```<command>```
+and ```<option_0>...<option_n>``` are optional parameters that the ```<command>``` may require. 
 
 So in the previous example where we used the **RegisterApi** methods, we have:
-
-**<api_domain>** ::= "myapp"
-
-**<module_address>** ::= "demo"
-
-**<command>** ::= "greet"
-
-**<option_0>** ::= "Foo+Bar"
-
+```
+<api_domain> ::= "myapp"
+<module_address> ::= "demo"
+<command> ::= "greet"
+<option_0> ::= "Foo+Bar"
+```
 
 ## NuGet Package
 
