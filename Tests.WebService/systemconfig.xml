@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<MigServiceConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<Gateways>
+    <Gateway Name="MIG.Gateways.WebServiceGateway" IsEnabled="true">
+        <Option Name="BaseUrl" Value="/" />
+        <Option Name="HomePath" Value="html" />
+        <Option Name="Host" Value="*" />
+        <Option Name="Port" Value="8080" />
+        <Option Name="EnableFileCaching" Value="True" />
+    </Gateway>
+</Gateways>
+<Interfaces>
+  <Interface Domain="HomeAutomation.ZWave" IsEnabled="false">
+    <Options>
+      <Option Name="Port" Value="" />
+    </Options>
+  </Interface>
+  <Interface Domain="HomeAutomation.Insteon" IsEnabled="false">
+    <Options>
+      <Option Name="Port" Value="" />
+      <Option Name="HouseCodes" Value="" />
+    </Options>
+  </Interface>
+  <Interface Domain="HomeAutomation.X10" IsEnabled="true">
+    <Options>
+      <Option Name="Port" Value="USB" />
+      <Option Name="HouseCodes" Value="B,C" />
+    </Options>
+  </Interface>
+  <Interface Domain="HomeAutomation.W800RF" IsEnabled="false">
+    <Options>
+      <Option Name="Port" Value="" />
+    </Options>
+  </Interface>
+  <Interface Domain="Controllers.LircRemote" IsEnabled="false">
+    <Options />
+  </Interface>
+  <Interface Domain="Media.CameraInput" IsEnabled="false">
+    <Options />
+  </Interface>
+  <Interface Domain="Protocols.UPnP" IsEnabled="false">
+    <Options />
+  </Interface>
+</Interfaces>
+</MigServiceConfiguration>

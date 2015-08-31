@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{8C90AAEE-6245-4F6F-9D4A-854300C662F6}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>MIG.HomeAutomation</RootNamespace>
+    <AssemblyName>MIG.HomeAutomation</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <ReleaseVersion>1.0</ReleaseVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>false</ConsolePause>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>full</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>false</ConsolePause>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="SoapBox.FluentDwelling">
+      <HintPath>..\MIG\Externals\FluentDwelling\SoapBox.FluentDwelling.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="NLog">
+      <HintPath>..\packages\NLog.4.0.1\lib\net45\NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="SerialPortLib">
+      <HintPath>..\packages\SerialPortLib.1.0.7\lib\SerialPortLib.dll</HintPath>
+    </Reference>
+    <Reference Include="ZWaveLib">
+      <HintPath>..\packages\ZWaveLib.1.0.2\lib\ZWaveLib.dll</HintPath>
+    </Reference>
+    <Reference Include="LibUsbDotNet">
+      <HintPath>..\packages\LibUsbDotNet.2.2.8\lib\LibUsbDotNet.dll</HintPath>
+    </Reference>
+    <Reference Include="XTenLib">
+      <HintPath>..\packages\XTenLib.1.0.3\lib\XTenLib.dll</HintPath>
+    </Reference>
+    <Reference Include="W800Rf32Lib">
+      <HintPath>..\packages\W800Rf32Lib.1.0.2\lib\W800Rf32Lib.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Insteon.cs" />
+    <Compile Include="W800RF.cs" />
+    <Compile Include="X10.cs" />
+    <Compile Include="ZWave.cs" />
+    <Compile Include="ModuleEvents.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <ProjectReference Include="..\MIG\MIG.csproj">
+      <Project>{005357C9-7F8E-458E-AFFA-BF84F7D6A6AE}</Project>
+      <Name>MIG</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="README.md" />
+  </ItemGroup>
+</Project>

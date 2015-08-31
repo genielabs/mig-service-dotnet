@@ -1,0 +1,48 @@
+﻿<html>
+<head>
+    <title>Mig Service test app</title>
+    <script src="https://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
+</head>
+<body>
+
+    <h1>Mig Service Test</h1>
+    <p>
+        This app listen to SSE and WebSocket events coming from Mig Service.
+        It will also make two API calls. One by using the WebSocket client, the other one by using a simple HTTP GET request.
+    </p>
+
+    <ul id="eventList"></ul>
+
+</body>
+
+ <script type="text/javascript">
+
+// Listen for SSE events
+var evtSource = new EventSource("/events");
+evtSource.onmessage = function(e) {
+    var newElement = document.createElement("li");
+    newElement.innerHTML = "HTTP SSE: " + e.data;
+    document.getElementById('eventList').appendChild(newElement);
+}
+
+// Listen for WebSocket events
+var exampleSocket = new WebSocket("ws://localhost:8181/events");
+exampleSocket.onmessage = function (e) {
+    var newElement = document.createElement("li");
+    newElement.innerHTML = "WebSocket: " + e.data;
+    document.getElementById('eventList').appendChild(newElement);
+}
+
+// Send a command though web socket
+setInterval(function(){
+    // Send a request using Web Socket
+    exampleSocket.send("myapp/demo/echo/Hello+World");
+    // Send a request using standard HTTP
+    $.get('/api/myapp/demo/ping', function(res){
+        console.log(res);
+    });
+}, 3000);
+
+</script>
+
+</html>
