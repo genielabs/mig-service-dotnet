@@ -1,6 +1,6 @@
 ﻿# MIG libray for .Net/Mono
 
-MIG is a .Net library providing an integrated solution for developing asynchronous real time web applications.
+MIG is a .Net library providing an integrated solution for developing networked applications and real time web applications.
 
 ## How it works
 
@@ -11,7 +11,9 @@ A Gateway is the medium used for receiving API commands from the client and tran
 An Interface is where all API commands are defined and related actions take place.
 
 So, when writing an application the developer will just focus on writing the *API* part of the application.
-Everything else will be automatically handled by MIG service.
+Once the API commands are defined, these can be invoked through one of the Gateway channels we defined for our application, that can be
+a raw TCP server, HTTP server, WebSocket server or MQTT server. Multiple Gateways can be active at the same time too so the application
+can communicate with its clients by using different gateway channels.
 
 Example code:
 ```csharp
@@ -23,10 +25,10 @@ var webServiceGw = migService.AddGateway("WebServiceGateway");
 // Add Web Socket gateway
 var webSocketGw = migService.AddGateway("WebSocketGateway");
 
-// Define an API handler for a specific URL /api/myapp/demo/greet
+// Define an API handler for myapp/demo/greet command
 migService.RegisterApi("myapp/demo/greet", (request)=>{
     // we registered an handler for
-    // /api/myapp/demo/greet/<option_0>[/<option_1>/../<option_n>]
+    // myapp/demo/greet/<option_0>[/<option_1>/../<option_n>]
     var name = request.Command.GetOption(0);
     // raise an event in the form
     // <domain>, <source>, <description>, <property>, <value>
@@ -35,30 +37,30 @@ migService.RegisterApi("myapp/demo/greet", (request)=>{
     return new ResponseStatus(Status.Ok);
 });
 
-// OR we can define a generic API handler for any request starting with /api/myapp/....
+// OR we can define a generic API handler for any request starting with myapp/....
 migService.RegisterApi("myapp", (request)=>{
     // we registered an handler for
-    // /api/myapp/<module_address>/<command>/<option_0>[/<option_1>/../<option_n>]
+    // myapp/<module_address>/<command>/<option_0>[/<option_1>/../<option_n>]
 
     var cmd = request.Command;
     switch(cmd.Address)
     {
     case "demo":
-        // /api/myapp/demo/....
+        // myapp/demo/....
         switch (cmd.Command)
         {
         case "greet":
-            // /api/myapp/demo/greet/....
+            // myapp/demo/greet/....
             // ....
             break;
         case "ping":
-            // /api/myapp/demo/ping/....
+            // myapp/demo/ping/....
             // ...
             break;
         }
         break;
     case "configure":
-        // /api/myapp/configure/....
+        // myapp/configure/....
         // ...
         break;
     }
@@ -67,9 +69,10 @@ migService.RegisterApi("myapp", (request)=>{
     return new ResponseStatus(Status.Ok);
 });
 ```
-In the above example we defined an handler for the API command */api/myapp/demo/greet*.
+In the above example we defined an handler for the API command *myapp/demo/greet*.
 This command can be issued from the web browser by either using a standard HTTP call
 ```
+// HTTP service API commands have to be issued using the /api/ prefix
 $.get('http://localhost/api/myapp/demo/greet/Foo+Bar', function(res) { ... });
 ```
 or by using the websocket client connection
@@ -81,14 +84,14 @@ wsclient.send('myapp/demo/greet/Foo Bar');
 
 Each gateway can be configured by using the *SetOption* method.
 
-### WebServiceGateway Features and Options
+### WebServiceGateway
 
 Features
 
-- built-in support for SSE (Server Sent Events) stream (url **/events**)
-- basic authentication
-- automatic Markdown files to HTML translation
-- file caching
+- HTTP server with built-in support for SSE (Server Sent Events) stream (url **/events**)
+- Basic Authentication
+- Automatic Markdown files to HTML translation
+- File caching
 
 Option List
 
@@ -116,7 +119,7 @@ web.SetOption("Password", "");
 web.SetOption("EnableFileCaching", "False"); 
 ```
 
-### WebSocketGateway Features and Options
+### WebSocketGateway
 
 The Web Socket server is based on [WebSocketSharp](https://github.com/sta/websocket-sharp).
 See the project home page for informations about all supported features.
@@ -130,6 +133,13 @@ Example
 var ws = migService.AddGateway("WebSocketGateway");
 ws.SetOption("Port", "8181");
 ```
+
+### TcpSocketGateway
+
+Options
+
+- Port (TCP port to listen on)
+
 
 ### MqttServiceGateway
 
@@ -153,7 +163,7 @@ For a list of currently implemented interfaces see the [MIG API](http://www.home
 
  The following is the suggested syntax for a MIG API command:
 ```
-/api/<api_domain>/<module_address>/<command>[/<option_0>/.../<option_n>]
+<api_domain>/<module_address>/<command>[/<option_0>/.../<option_n>]
 ```
 Where ```<api_domain>``` is used to address a specific API domain, ```<module_address>``` the target module of the API ```<command>```
 and ```<option_0>...<option_n>``` are optional parameters that the ```<command>``` may require. 
