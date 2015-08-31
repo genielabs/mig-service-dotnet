@@ -4,16 +4,15 @@ MIG is a .Net library providing an integrated solution for developing networked 
 
 ## How it works
 
-We have two main concept in MIG: **Gateway** and **Interface**.
+We have two main actors in MIG: **Gateway** and **Interface**.
 
-A Gateway is the medium used for receiving API commands from the client and transmitting responses and events back to it.
+A Gateway is the medium used for receiving API commands from the client and for transmitting responses and events back to it.
 
 An Interface is where all API commands are defined and related actions take place.
 
-So, when writing an application the developer will just focus on writing the *API* part of the application.
-Once the API commands are defined, these can be invoked through one of the Gateway channels we defined for our application, that can be
-a raw TCP server, HTTP server, WebSocket server or MQTT server. Multiple Gateways can be active at the same time too so the application
-can communicate with its clients by using different gateway channels.
+So, when writing an application based on MIG, the developer will just focus on the *API* coding.
+
+Once the API commands are implemented, the application is ready to communicate with its clients through the desired **Gateway** medium. This can be a raw TCP socket server *(TcpSocketGateway)*, an HTTP server *(WebServiceGateway)*, a WebSocket server *(WebSocketGateway)*, a MQTT server *(MqttServiceGateway)* or even **ALL** of them at the same time, so to have a multi-protocol support for the application.
 
 Example code:
 ```csharp
@@ -80,7 +79,7 @@ or by using the websocket client connection
 wsclient.send('myapp/demo/greet/Foo Bar');
 ```
 
-## MIG Gateways
+## Gateways
 
 Each gateway can be configured by using the *SetOption* method.
 
@@ -145,11 +144,11 @@ Options
 
 A MIG Gateway for supporting the MQTT protocol will be available in future releases.
 
-## Interface API Plugins
+## Interfaces 
 
 While in the earlier example we saw how to define an API command dynamically by using the **RegisterApi** method, MIG API commands can also
 be extended by using **Interface Plugins**.
-Interface Plugins are loadable modules that adds new API commands to MIG.
+Interface Plugins are loadable modules (dll) that adds new API commands to MIG.
 
 Example:
 ```csharp
