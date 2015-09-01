@@ -349,6 +349,7 @@ namespace MIG
             if (migInterface != null)
             {
                 Log.Debug("Enabling Interface {0}", domain);
+                configuration.GetInterface(domain).IsEnabled = true;
                 migInterface.IsEnabled = true;
                 migInterface.Connect();
             }
@@ -370,9 +371,9 @@ namespace MIG
             if (migInterface != null)
             {
                 Log.Debug("Disabling Interface {0}", domain);
+                configuration.GetInterface(domain).IsEnabled = false;
                 migInterface.IsEnabled = false;
                 migInterface.Disconnect();
-                configuration.GetInterface(domain).IsEnabled = false;
             }
             else
             {
