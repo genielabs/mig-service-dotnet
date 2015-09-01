@@ -146,17 +146,18 @@ A MIG Gateway for supporting the MQTT protocol will be available in future relea
 
 ## Interfaces 
 
-While in the earlier example we saw how to define an API command dynamically by using the **RegisterApi** method, MIG API commands can also
-be extended by using **Interface Plugins**.
-Interface Plugins are loadable modules (dll) that adds new API commands to MIG.
+While in the earlier examples we used the **RegisterApi** method to dynamically add new API commands, these can also be added by using **Interface** plugins.
+Interface plugins are library modules (dll) that can be dinamically loaded into MIG. See [MIG.HomeAutomation](tree/master/MIG.HomeAutomation) project source code for an example about how to create a MIG Interface plugin.
 
-Example:
+Code for loading an Interface plugin:
 ```csharp
+// Load the "HomeAutomation.ZWave" Interface from the "MIG.HomeAutomation.dll" library file
 var zwave = migService.AddInterface("HomeAutomation.ZWave", "MIG.HomeAutomation.dll");
+// configure the serial port
 zwave.SetOption("Port", "/dev/ttyUSB0");
 ```
-The example above adds to MIG, API commands for controlling Z-Wave Home Automation hardware.
-For a list of currently implemented interfaces see the [MIG API](http://www.homegenie.it/docs/api/mig_api_interfaces.html) documentation page.
+The example above is used to load the *HomeAutomation.ZWave* Interface plugin into MIG. This will add a set of new API commands for controlling Z-Wave Home Automation hardware.
+For a list of currently available Interfaces and API, see the [MIG API](http://www.homegenie.it/docs/api/mig_api_interfaces.html) documentation page.
 
 ## Suggested syntax for API commands
 
