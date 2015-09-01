@@ -147,7 +147,7 @@ A MIG Gateway for supporting the MQTT protocol will be available in future relea
 ## Interfaces 
 
 While in the earlier examples we used the **RegisterApi** method to dynamically add new API commands, these can also be added by using **Interface** plugins.
-Interface plugins are library modules (dll) that can be dinamically loaded into MIG. See [MIG.HomeAutomation](tree/master/MIG.HomeAutomation) project source code for an example about how to create a MIG Interface plugin.
+Interface plugins are library modules (dll) that can be dinamically loaded into MIG. See [MIG.HomeAutomation](MIG.HomeAutomation) project source code for an example about how to create a MIG Interface plugin.
 
 Code for loading an Interface plugin:
 ```csharp
