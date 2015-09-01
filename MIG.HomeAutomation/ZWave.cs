@@ -270,10 +270,11 @@ namespace MIG.Interfaces.HomeAutomation
                         break;
 
                     case Commands.Controller_NodeNeighborUpdate:
-                        controller.RequestNeighborsUpdateOptions(nodeNumber).Wait();
-                        controller.RequestNeighborsUpdate(nodeNumber).Wait();
-                        controller.GetNeighborsRoutingInfo(nodeNumber).Wait();
-                        returnValue = GetResponseValue(EventPath_RoutingInfo);
+                        SetResponseEvent(EventPath_RoutingInfo);
+                        controller.RequestNeighborsUpdateOptions(nodeNumber);
+                        controller.RequestNeighborsUpdate(nodeNumber);
+                        controller.GetNeighborsRoutingInfo(nodeNumber);
+                        returnValue = GetResponseValue();
                         break;
 
                     case Commands.Controller_NodeAdd:
@@ -407,7 +408,9 @@ namespace MIG.Interfaces.HomeAutomation
                         break;
 
                     case Commands.NodeInfo_Get:
+                        SetResponseEvent(EventPath_NodeInfo);
                         controller.GetNodeInformationFrame(nodeNumber);
+                        returnValue = GetResponseValue();
                         break;
 
                     case Commands.Battery_Get:
@@ -430,8 +433,9 @@ namespace MIG.Interfaces.HomeAutomation
                         break;
 
                     case Commands.ManufacturerSpecific_Get:
+                        SetResponseEvent(EventPath_ManufacturerSpecific);
                         ManufacturerSpecific.Get(node);
-                        returnValue = GetResponseValue(EventPath_ManufacturerSpecific);
+                        returnValue = GetResponseValue();
                         break;
 
                     case Commands.Config_ParameterSet:
@@ -936,12 +940,22 @@ namespace MIG.Interfaces.HomeAutomation
             }
         }
 
-        private string GetResponseValue(string eventPath)
+        private void SetResponseEvent(string eventPath)
         {
             waitEventPath = eventPath;
-            responseAck.Reset();
-            responseAck.WaitOne(ZWaveMessage.SendMessageTimeoutMs);
+            waitEventValue = null;
+        }
+
+        private string GetResponseValue(string eventPath = "")
+        {
             string returnValue = "[{ \"ResponseValue\" : \"ERR_TIMEOUT\" }]";
+            if (!String.IsNullOrWhiteSpace(eventPath))
+                waitEventPath = eventPath;
+            if (waitEventValue == null)
+            {
+                responseAck.Reset();
+                responseAck.WaitOne(ZWaveMessage.SendMessageTimeoutMs);
+            }
             if (waitEventValue != null)
             {
                 returnValue = "[{ \"ResponseValue\" : \"" + waitEventValue + "\" }]";

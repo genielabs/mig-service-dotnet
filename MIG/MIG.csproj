@@ -37,20 +37,8 @@
     <Reference Include="System" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Xml" />
-    <Reference Include="SerialPortLib">
-      <HintPath>..\packages\SerialPortLib.1.0.7\lib\SerialPortLib.dll</HintPath>
-    </Reference>
-    <Reference Include="W800Rf32Lib">
-      <HintPath>..\packages\W800Rf32Lib.1.0.2\lib\W800Rf32Lib.dll</HintPath>
-    </Reference>
     <Reference Include="LibUsbDotNet">
       <HintPath>..\packages\LibUsbDotNet.2.2.8\lib\LibUsbDotNet.dll</HintPath>
-    </Reference>
-    <Reference Include="XTenLib">
-      <HintPath>..\packages\XTenLib.1.0.3\lib\XTenLib.dll</HintPath>
-    </Reference>
-    <Reference Include="ZWaveLib">
-      <HintPath>..\packages\ZWaveLib.1.0.2\lib\ZWaveLib.dll</HintPath>
     </Reference>
     <Reference Include="CommonMark">
       <HintPath>..\packages\CommonMark.NET.0.9.1\lib\net45\CommonMark.dll</HintPath>
@@ -58,11 +46,11 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="NLog">
-      <HintPath>..\packages\NLog.4.0.1\lib\net45\NLog.dll</HintPath>
-    </Reference>
     <Reference Include="Ude">
       <HintPath>..\packages\UDE.CSharp.1.1.0\lib\Ude.dll</HintPath>
+    </Reference>
+    <Reference Include="NLog">
+      <HintPath>..\packages\NLog.4.1.0\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="websocket-sharp">
       <HintPath>..\packages\WebSocketSharp.1.0.3-rc9\lib\websocket-sharp.dll</HintPath>
