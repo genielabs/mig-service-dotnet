@@ -157,7 +157,7 @@ var zwave = migService.AddInterface("HomeAutomation.ZWave", "MIG.HomeAutomation.
 zwave.SetOption("Port", "/dev/ttyUSB0");
 ```
 The example above is used to load the *HomeAutomation.ZWave* Interface plugin into MIG. This will add a set of new API commands for controlling Z-Wave Home Automation hardware.
-For a list of currently available Interfaces and API, see the [MIG API](http://www.homegenie.it/docs/api/mig_api_interfaces.html) documentation page.
+For a list of currently available Interfaces and API, see the [MIG API](http://www.homegenie.it/docs/api/mig_api_zwave.html) documentation page.
 
 ## Suggested syntax for API commands
 
