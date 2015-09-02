@@ -93,9 +93,9 @@ namespace MIG.Gateways
         {
         }
 
-        public List<ConfigurationOption> Options { get; set; }
+        public List<Option> Options { get; set; }
 
-        public void OnSetOption(ConfigurationOption option)
+        public void OnSetOption(Option option)
         {
             switch (option.Name)
             {
@@ -303,8 +303,8 @@ namespace MIG.Gateways
                                         var migContext = new MigContext(ContextSource.WebServiceGateway, context);
                                         migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(message));
                                         // Store POST data (if any) in the migRequest.RequestData field
-                                        using (var stream = new StreamReader(context.Request.InputStream))
-                                            migRequest.RequestData = stream.ReadToEnd();
+                                        migRequest.RequestData = WebServiceUtility.ReadToEnd(context.Request.InputStream);
+                                        migRequest.RequestText = context.Request.ContentEncoding.GetString(migRequest.RequestData);
                                     }
 
                                     OnPreProcessRequest(migRequest);

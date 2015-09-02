@@ -35,7 +35,7 @@ namespace MIG
             return domain;
         }
 
-        public static ConfigurationOption GetOption(this MigInterface iface, string option)
+        public static Option GetOption(this MigInterface iface, string option)
         {
             if (iface.Options != null)
             {
@@ -50,7 +50,7 @@ namespace MIG
             var opt = iface.GetOption(option);
             if (opt == null)
             {
-                opt = new ConfigurationOption() { Name = option };
+                opt = new Option() { Name = option };
                 iface.Options.Add(opt);
             }
             opt.Value = value;
@@ -68,9 +68,9 @@ namespace MIG
         /// sets the interface options.
         /// </summary>
         /// <param name="options">Options.</param>
-        List<ConfigurationOption> Options { get; set; }
+        List<Option> Options { get; set; }
 
-        void OnSetOption(ConfigurationOption option);
+        void OnSetOption(Option option);
 
         /// <summary>
         /// all input data coming from connected device

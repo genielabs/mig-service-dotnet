@@ -30,34 +30,35 @@ namespace MIG.Config
     [Serializable()]
     public class MigServiceConfiguration
     {
-        //public string EnableWebCache { get; set; }
-
         public List<Gateway> Gateways = new List<Gateway>();
 
         public List<Interface> Interfaces = new List<Interface>();
 
         public Interface GetInterface(string domain)
         {
-            var iface = this.Interfaces.Find(i => i.Domain == domain);
-            return iface;
+            return this.Interfaces.Find(i => i.Domain.Equals(domain));
         }
 
         public Gateway GetGateway(string name)
         {
-            var gw = this.Gateways.Find(g => g.Name.Equals(name));
-            return gw;
+            return this.Gateways.Find(g => g.Name.Equals(name));
         }
     }
 
     [Serializable]
     public class Gateway
     {
+        [XmlAttribute]
         public string Name { get; set; }
-        public List<ConfigurationOption> Options = new List<ConfigurationOption>();
+
+        [XmlAttribute]
+        public bool IsEnabled { get; set; }
+
+        public List<Option> Options = new List<Option>();
     }
 
     [Serializable]
-    public class ConfigurationOption
+    public class Option
     {
         [XmlAttribute]
         public string Name { get; set; }
@@ -78,7 +79,7 @@ namespace MIG.Config
         [XmlAttribute]
         public bool IsEnabled { get; set; }
 
-        public List<ConfigurationOption> Options = new List<ConfigurationOption>();
+        public List<Option> Options = new List<Option>();
 
         [XmlAttribute]
         public string AssemblyName { get; set; }

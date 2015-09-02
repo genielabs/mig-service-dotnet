@@ -34,7 +34,8 @@ namespace MIG
         public MigContext Context  { get; }
         public MigInterfaceCommand Command { get; }
 
-        public string RequestData;
+        public string RequestText;
+        public byte[] RequestData;
 
         public object ResponseData
         {

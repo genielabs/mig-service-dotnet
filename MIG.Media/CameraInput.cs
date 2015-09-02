@@ -22,10 +22,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
-using System.Runtime.InteropServices;
 using MIG.Config;
 
 namespace MIG.Interfaces.Media
@@ -106,9 +107,9 @@ namespace MIG.Interfaces.Media
 
         public bool IsEnabled { get; set; }
 
-        public List<ConfigurationOption> Options { get; set; }
+        public List<Option> Options { get; set; }
 
-        public void OnSetOption(ConfigurationOption option)
+        public void OnSetOption(Option option)
         {
             // TODO: check if this is working
             if (IsEnabled)
@@ -218,6 +219,38 @@ namespace MIG.Interfaces.Media
         #endregion
 
         #region public members
+
+        public CameraInput()
+        {
+            // video 4 linux interop, try to detect Raspbian/Ubuntu
+            if (Directory.Exists("/lib/arm-linux-gnueabi") || Directory.Exists("/lib/arm-linux-gnueabihf"))
+            {
+                MigService.ShellCommand("cp", " -f \"" + Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "v4l/raspbian_libCameraCaptureV4L.so") + "\" \"" + Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libCameraCaptureV4L.so") + "\"");
+                //
+                //if (File.Exists("/usr/lib/libgdiplus.so") && !File.Exists("/usr/local/lib/libgdiplus.so"))
+                //{
+                //    ShellCommand("ln", " -s \"/usr/lib/libgdiplus.so\" \"/usr/local/lib/libgdiplus.so\"");
+                //}
+            }
+            else // fallback (ubuntu and other 64bit debians)
+            {
+                string v4lfile = "v4l/debian64_libCameraCaptureV4L.so.gd3";
+                if (!File.Exists("/usr/lib/x86_64-linux-gnu/libgd.so.3"))
+                {
+                    v4lfile = "v4l/debian64_libCameraCaptureV4L.so";
+                }
+                MigService.ShellCommand(
+                    "cp",
+                    " -f \"" + Path.Combine(
+                        AppDomain.CurrentDomain.BaseDirectory,
+                        v4lfile
+                    ) + "\" \"" + Path.Combine(
+                        AppDomain.CurrentDomain.BaseDirectory,
+                        "libCameraCaptureV4L.so"
+                    ) + "\""
+                );
+            }
+        }
 
         public CameraConfiguration GetConfiguration()
         {

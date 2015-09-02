@@ -22,6 +22,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 using MIG.Config;
@@ -189,17 +190,23 @@ namespace MIG
             get { return configuration; }
             set
             {
+                // TODO: SHOULD DISPOSE PREVIOUS CONFIG AND ALLOCATED OBJECTS!!
                 configuration = value;
-                // Create MIG interfaces
-                foreach (var iface in configuration.Interfaces)
-                {
-                    AddInterface(iface.Domain, iface.AssemblyName);
-                }
                 // Create MIG Gateways
-                foreach (var gateway in configuration.Gateways)
+                for (int g = 0; g < configuration.Gateways.Count; g++)
                 {
-                    //TODO: Use a string parameter with relative class name as it happen for MIG.Interfaces
-                    AddGateway(gateway.Name);
+                    var gwConfig = configuration.Gateways[g];
+                    var gateway = AddGateway(gwConfig.Name);
+//                    if (gateway != null && gwConfig.IsEnabled)
+//                        gateway.Start();
+                }
+                // Create MIG interfaces
+                for (int i = 0; i < configuration.Interfaces.Count; i++)
+                {
+                    var ifConfig = configuration.Interfaces[i];
+                    var migInterface = AddInterface(ifConfig.Domain, ifConfig.AssemblyName);
+//                    if (migInterface != null && ifConfig.IsEnabled)
+//                        migInterface.Connect();
                 }
             }
         }
@@ -248,15 +255,18 @@ namespace MIG
             {
                 config = new Gateway();
                 config.Name = migGateway.GetName();
-                config.Options = new List<ConfigurationOption>();
+                config.Options = new List<Option>();
                 configuration.Gateways.Add(config);
             }
-            Log.Debug("Setting Gateway options");
-            migGateway.Options = configuration.GetGateway(migGateway.GetName()).Options;
-            foreach (var opt in migGateway.Options)
+            if (migGateway != null)
             {
-                Log.Debug("{0}: {1}={2}", migGateway.GetName(), opt.Name, opt.Value);
-                migGateway.SetOption(opt.Name, opt.Value);
+                Log.Debug("Setting Gateway options");
+                migGateway.Options = configuration.GetGateway(migGateway.GetName()).Options;
+                foreach (var opt in migGateway.Options)
+                {
+                    Log.Debug("{0}: {1}={2}", migGateway.GetName(), opt.Name, opt.Value);
+                    migGateway.SetOption(opt.Name, opt.Value);
+                }
             }
             return migGateway;
         }
@@ -284,7 +294,12 @@ namespace MIG
             {
                 try
                 {
-                    var type = Type.GetType("MIG.Interfaces." + domain + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + assemblyName));
+                    // TODO: move this type resolution block to an utility function
+                    var type = Type.GetType("MIG.Interfaces." + domain + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + Path.Combine("mig", assemblyName)));
+                    if (type == null)
+                        type = Type.GetType("MIG.Interfaces." + domain + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + Path.Combine("lib", assemblyName)));
+                    if (type == null)
+                        type = Type.GetType("MIG.Interfaces." + domain + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + assemblyName));
                     migInterface = (MigInterface)Activator.CreateInstance(type);
                 }
                 catch (Exception e)
@@ -305,14 +320,17 @@ namespace MIG
             {
                 config = new Interface();
                 config.Domain = domain;
-                config.Options = new List<ConfigurationOption>();
+                config.Options = new List<Option>();
                 configuration.Interfaces.Add(config);
             }
-            Log.Debug("Setting Interface options");
-            migInterface.Options = config.Options;
-            foreach (var opt in migInterface.Options)
+            if (migInterface != null)
             {
-                migInterface.SetOption(opt.Name, opt.Value);
+                Log.Debug("Setting Interface options");
+                migInterface.Options = config.Options;
+                foreach (var opt in migInterface.Options)
+                {
+                    migInterface.SetOption(opt.Name, opt.Value);
+                }
             }
             return migInterface;
         }
@@ -434,6 +452,17 @@ namespace MIG
         public static string JsonSerialize(object data, bool indent = false)
         {
             return Utility.Serialization.JsonSerialize(data, indent);
+        }
+
+        public static void ShellCommand(string command, string args)
+        {
+            var processInfo = new System.Diagnostics.ProcessStartInfo(command, args);
+            processInfo.RedirectStandardOutput = false;
+            processInfo.UseShellExecute = false;
+            processInfo.CreateNoWindow = true;
+            var process = new System.Diagnostics.Process();
+            process.StartInfo = processInfo;
+            process.Start();
         }
 
         #endregion
@@ -637,6 +666,7 @@ namespace MIG
 
         protected virtual void OnInterfaceModulesChanged(InterfaceModulesChangedEventArgs args)
         {
+            Log.Info(args.Domain);
             if (InterfaceModulesChanged != null)
             {
                 InterfaceModulesChanged(this, args);
@@ -645,6 +675,7 @@ namespace MIG
 
         protected virtual void OnInterfacePropertyChanged(InterfacePropertyChangedEventArgs args)
         {
+            Log.Info(args.EventData);
             if (InterfacePropertyChanged != null)
             {
                 InterfacePropertyChanged(this, args);

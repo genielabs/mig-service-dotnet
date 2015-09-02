@@ -57,9 +57,9 @@ namespace MIG.Gateways
         {
         }
 
-        public List<ConfigurationOption> Options { get; set; }
+        public List<Option> Options { get; set; }
 
-        public void OnSetOption(ConfigurationOption option)
+        public void OnSetOption(Option option)
         {
             if (option.Name.Equals("Port"))
             {

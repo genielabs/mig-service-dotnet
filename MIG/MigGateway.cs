@@ -32,10 +32,10 @@ namespace MIG
     {
         public static string GetName(this MigGateway gateway)
         {
-            return gateway.GetType().ToString();
+            return gateway.GetType().Name;
         }
 
-        public static ConfigurationOption GetOption(this MigGateway gateway, string option)
+        public static Option GetOption(this MigGateway gateway, string option)
         {
             if (gateway.Options != null)
             {
@@ -50,7 +50,7 @@ namespace MIG
             var opt = gateway.GetOption(option);
             if (opt == null)
             {
-                opt = new ConfigurationOption() { Name = option };
+                opt = new Option() { Name = option };
                 gateway.Options.Add(opt);
             }
             opt.Value = value;
@@ -63,10 +63,10 @@ namespace MIG
         event PreProcessRequestEventHandler PreProcessRequest;
         event PostProcessRequestEventHandler PostProcessRequest;
 
-        void OnSetOption(ConfigurationOption option);
+        void OnSetOption(Option option);
         void OnInterfacePropertyChanged(object sender, InterfacePropertyChangedEventArgs args);
 
-        List<ConfigurationOption> Options { get; set; }
+        List<Option> Options { get; set; }
 
         bool Start();
         void Stop();

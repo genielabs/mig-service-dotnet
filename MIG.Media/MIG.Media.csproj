@@ -46,5 +46,17 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
+    <None Include="v4l\debian64_libCameraCaptureV4L.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="v4l\debian64_libCameraCaptureV4L.so.gd3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="v4l\raspbian_libCameraCaptureV4L.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="v4l\" />
   </ItemGroup>
 </Project>

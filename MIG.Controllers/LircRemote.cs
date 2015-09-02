@@ -104,9 +104,9 @@ namespace MIG.Interfaces.Controllers
 
         public bool IsEnabled { get; set; }
 
-        public List<ConfigurationOption> Options { get; set; }
+        public List<Option> Options { get; set; }
 
-        public void OnSetOption(ConfigurationOption option)
+        public void OnSetOption(Option option)
         {
             // TODO: check if this is working
             if (IsEnabled)
@@ -304,7 +304,7 @@ namespace MIG.Interfaces.Controllers
                     }
                     c++;
                 }
-                ShellCommand("irsend", "SEND_ONCE " + commands);
+                MigService.ShellCommand("irsend", "SEND_ONCE " + commands);
                 break;
             }
 
@@ -317,6 +317,33 @@ namespace MIG.Interfaces.Controllers
 
         public LircRemote()
         {
+            // lirc client lib symlink
+            var liblirclink = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "liblirc_client.so");
+            if (File.Exists("/usr/lib/liblirc_client.so") && !File.Exists(liblirclink))
+            {
+                MigService.ShellCommand("ln", " -s \"/usr/lib/liblirc_client.so\" \"" + liblirclink + "\"");
+            }
+            else if (File.Exists("/usr/lib/liblirc_client.so.0") && !File.Exists(liblirclink))
+            {
+                MigService.ShellCommand("ln", " -s \"/usr/lib/liblirc_client.so.0\" \"" + liblirclink + "\"");
+            }
+            // create .lircrc file
+            var lircrcFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), ".lircrc");
+            if (!File.Exists(lircrcFile))
+            {
+                var lircrc = "begin\n" +
+                    "        prog = homegenie\n" +
+                    "        button = KEY_1\n" +
+                    "        repeat = 3\n" +
+                    "        config = KEY_1\n" +
+                    "end\n";
+                try
+                {
+                    File.WriteAllText(lircrcFile, lircrc);
+                }
+                catch { }
+            }
+            //
             remotesConfig = new List<LircRemoteData>();
             string configfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "lircconfig.xml");
             if (File.Exists(configfile))
@@ -388,7 +415,7 @@ namespace MIG.Interfaces.Controllers
                     lircConfiguration += GetString(remote.Configuration) + "\n";
                 }
                 File.WriteAllText("/etc/lirc/lircd.conf", lircConfiguration);
-                ShellCommand("/etc/init.d/lirc", " force-reload");
+                MigService.ShellCommand("/etc/init.d/lirc", " force-reload");
             }
             catch
             {
@@ -407,17 +434,6 @@ namespace MIG.Interfaces.Controllers
             char[] chars = new char[bytes.Length / sizeof(char)];
             System.Buffer.BlockCopy(bytes, 0, chars, 0, bytes.Length);
             return new string(chars);
-        }
-
-        static void ShellCommand(string command, string args)
-        {
-            var processInfo = new System.Diagnostics.ProcessStartInfo(command, args);
-            processInfo.RedirectStandardOutput = false;
-            processInfo.UseShellExecute = false;
-            processInfo.CreateNoWindow = true;
-            var process = new System.Diagnostics.Process();
-            process.StartInfo = processInfo;
-            process.Start();
         }
 
         #endregion

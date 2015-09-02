@@ -28,8 +28,8 @@ namespace MIG
 
     public class OptionChangedEventArgs
     {
-        public readonly ConfigurationOption Option;
-        public OptionChangedEventArgs(ConfigurationOption option)
+        public readonly Option Option;
+        public OptionChangedEventArgs(Option option)
         {
             Option = option;
         }

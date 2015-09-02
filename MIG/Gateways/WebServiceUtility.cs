@@ -123,7 +123,12 @@ namespace MIG.Gateways
 
         public static string SaveFile(Stream input, string outputPath)
         {
-            var parser = new MultipartParser(ReadToEnd(input));
+            return SaveFile(ReadToEnd(input), outputPath);
+        }
+
+        public static string SaveFile(byte[] data, string outputPath)
+        {
+            var parser = new MultipartParser(data);
             if (parser.Success)
             {
                 var fileName = parser.Filename;

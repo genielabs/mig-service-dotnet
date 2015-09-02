@@ -71,9 +71,9 @@ namespace MIG.Interfaces.HomeAutomation
 
         public bool IsEnabled { get; set; }
 
-        public List<ConfigurationOption> Options { get; set; }
+        public List<Option> Options { get; set; }
 
-        public void OnSetOption(ConfigurationOption option)
+        public void OnSetOption(Option option)
         {
             // TODO: check if this is working
             if (IsEnabled)

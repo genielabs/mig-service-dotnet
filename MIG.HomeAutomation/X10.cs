@@ -66,7 +66,7 @@ namespace MIG.Interfaces.HomeAutomation
         private XTenManager x10lib;
         private Timer rfPulseTimer;
         private List<InterfaceModule> securityModules;
-        private List<ConfigurationOption> options;
+        private List<Option> options;
 
         #endregion
 
@@ -77,7 +77,7 @@ namespace MIG.Interfaces.HomeAutomation
 
         public bool IsEnabled { get; set; }
 
-        public List<ConfigurationOption> Options
+        public List<Option> Options
         { 
             get
             {
@@ -91,7 +91,7 @@ namespace MIG.Interfaces.HomeAutomation
             }
         }
 
-        public void OnSetOption(ConfigurationOption option)
+        public void OnSetOption(Option option)
         {
             // TODO: check if this is working
             if (IsEnabled)
@@ -247,6 +247,18 @@ namespace MIG.Interfaces.HomeAutomation
 
         public X10()
         {
+            var libusblink = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libusb-1.0.so");
+            // RaspBerry Pi armel dependency check and needed symlink
+            if ((File.Exists("/lib/arm-linux-gnueabi/libusb-1.0.so.0.1.0") || File.Exists("/lib/arm-linux-gnueabihf/libusb-1.0.so.0.1.0")) && !File.Exists(libusblink))
+            {
+                MigService.ShellCommand("ln", " -s \"/lib/arm-linux-gnueabi/libusb-1.0.so.0.1.0\" \"" + libusblink + "\"");
+            }
+            // Debian/Ubuntu 64bit dependency and needed symlink check
+            if (File.Exists("/lib/x86_64-linux-gnu/libusb-1.0.so.0") && !File.Exists(libusblink))
+            {
+                MigService.ShellCommand("ln", " -s \"/lib/x86_64-linux-gnu/libusb-1.0.so.0\" \"" + libusblink + "\"");
+            }
+
             x10lib = new XTenManager();
             x10lib.ModuleChanged += X10lib_ModuleChanged;
             x10lib.RfDataReceived += X10lib_RfDataReceived;

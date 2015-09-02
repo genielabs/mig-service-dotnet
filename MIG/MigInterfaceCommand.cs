@@ -28,8 +28,8 @@ namespace MIG
     {
         private string[] options = new string[0];
 
-        public string Domain { get; }
-        public string Address { get; }
+        public string Domain { get; set; }
+        public string Address { get; set; }
         public string Command { get; }
         /// <summary>
         /// The full unparsed original request string.

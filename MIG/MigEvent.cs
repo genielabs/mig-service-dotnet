@@ -25,6 +25,7 @@ using System;
 namespace MIG
 {
 
+    [Serializable()]
     public class MigEvent
     {
         public DateTime Timestamp = DateTime.UtcNow;
@@ -51,6 +52,14 @@ namespace MIG
             Description = description;
             Property = propertyPath;
             Value = propertyValue;
+        }
+
+        public override string ToString()
+        {
+            //string date = this.Timestamp.ToLocalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffzzz");
+            //string logentrytxt = date + "\t" + this.Domain + "\t" + this.Source + "\t" + (this.Description == "" ? "-" : this.Description) + "\t" + this.Property + "\t" + this.Value;
+            string logentrytxt = this.Domain + "\t" + this.Source + "\t" + (this.Description == "" ? "-" : this.Description) + "\t" + this.Property + "\t" + this.Value;
+            return logentrytxt;
         }
     }
 
