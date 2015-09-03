@@ -203,6 +203,7 @@ namespace MIG.Gateways
                 response.KeepAlive = false;
                 //
                 bool isAuthenticated = (request.Headers["Authorization"] != null);
+                string remoteAddress = context.Request.RemoteEndPoint.Address.ToString();
                 //
                 if (servicePassword == "" || isAuthenticated) //request.IsAuthenticated)
                 {
@@ -494,6 +495,13 @@ namespace MIG.Gateways
                     response.AddHeader("WWW-Authenticate", "Basic");
                     //context.Response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                 }
+                MigService.Log.Info(new MigEvent(
+                    this.GetName(),
+                    remoteAddress,
+                    "HTTP",
+                    request.HttpMethod.ToString(),
+                    String.Format("{0} {1}", response.StatusCode, request.RawUrl))
+                );
             }
             catch (Exception ex)
             {

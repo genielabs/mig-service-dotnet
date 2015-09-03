@@ -222,10 +222,11 @@ namespace MIG.Interfaces.Media
 
         public CameraInput()
         {
+            string assemblyFolder = MigService.GetAssemblyDirectory(this.GetType().Assembly);
             // video 4 linux interop, try to detect Raspbian/Ubuntu
             if (Directory.Exists("/lib/arm-linux-gnueabi") || Directory.Exists("/lib/arm-linux-gnueabihf"))
             {
-                MigService.ShellCommand("cp", " -f \"" + Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "v4l/raspbian_libCameraCaptureV4L.so") + "\" \"" + Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libCameraCaptureV4L.so") + "\"");
+                MigService.ShellCommand("cp", " -f \"" + Path.Combine(assemblyFolder, "v4l/raspbian_libCameraCaptureV4L.so") + "\" \"" + Path.Combine(assemblyFolder, "libCameraCaptureV4L.so") + "\"");
                 //
                 //if (File.Exists("/usr/lib/libgdiplus.so") && !File.Exists("/usr/local/lib/libgdiplus.so"))
                 //{
@@ -242,10 +243,10 @@ namespace MIG.Interfaces.Media
                 MigService.ShellCommand(
                     "cp",
                     " -f \"" + Path.Combine(
-                        AppDomain.CurrentDomain.BaseDirectory,
+                        assemblyFolder,
                         v4lfile
                     ) + "\" \"" + Path.Combine(
-                        AppDomain.CurrentDomain.BaseDirectory,
+                        assemblyFolder,
                         "libCameraCaptureV4L.so"
                     ) + "\""
                 );

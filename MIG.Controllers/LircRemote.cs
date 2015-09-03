@@ -41,10 +41,10 @@ namespace MIG.Interfaces.Controllers
     [Serializable]
     public class LircRemoteData
     {
-        public string Manufacturer = "";
-        public string Model = "";
+        public string Manufacturer { get; set; }
+        public string Model { get; set; }
         //[NonSerialized]
-        public byte[] Configuration;
+        public byte[] Configuration { get; set; }
     }
 
     public class LircRemote : MigInterface
@@ -313,12 +313,13 @@ namespace MIG.Interfaces.Controllers
 
         #endregion
 
-        #region lifecycle
+        #region Lifecycle
 
         public LircRemote()
         {
             // lirc client lib symlink
-            var liblirclink = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "liblirc_client.so");
+            string assemblyFolder = MigService.GetAssemblyDirectory(this.GetType().Assembly);
+            var liblirclink = Path.Combine(assemblyFolder, "liblirc_client.so");
             if (File.Exists("/usr/lib/liblirc_client.so") && !File.Exists(liblirclink))
             {
                 MigService.ShellCommand("ln", " -s \"/usr/lib/liblirc_client.so\" \"" + liblirclink + "\"");
@@ -345,7 +346,7 @@ namespace MIG.Interfaces.Controllers
             }
             //
             remotesConfig = new List<LircRemoteData>();
-            string configfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "lircconfig.xml");
+            string configfile = Path.Combine(assemblyFolder, "lircconfig.xml");
             if (File.Exists(configfile))
             {
                 var serializer = new XmlSerializer(typeof(List<LircRemoteData>));
@@ -354,7 +355,7 @@ namespace MIG.Interfaces.Controllers
                 reader.Close();
             }
             //
-            string remotesdb = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "lircremotes.xml");
+            string remotesdb = Path.Combine(assemblyFolder, "lircremotes.xml");
             if (File.Exists(remotesdb))
             {
                 var serializer = new XmlSerializer(typeof(List<LircRemoteData>));

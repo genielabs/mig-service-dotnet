@@ -247,7 +247,8 @@ namespace MIG.Interfaces.HomeAutomation
 
         public X10()
         {
-            var libusblink = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libusb-1.0.so");
+            string assemblyFolder = MigService.GetAssemblyDirectory(this.GetType().Assembly);
+            var libusblink = Path.Combine(assemblyFolder, "libusb-1.0.so");
             // RaspBerry Pi armel dependency check and needed symlink
             if ((File.Exists("/lib/arm-linux-gnueabi/libusb-1.0.so.0.1.0") || File.Exists("/lib/arm-linux-gnueabihf/libusb-1.0.so.0.1.0")) && !File.Exists(libusblink))
             {

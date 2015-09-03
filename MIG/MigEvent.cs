@@ -43,7 +43,7 @@ namespace MIG
         public string Source { get; }
         public string Description { get; }
         public string Property { get; }
-        public object Value { get; }
+        public object Value { get; set; }
 
         public MigEvent(string domain, string source, string description, string propertyPath, object propertyValue)
         {

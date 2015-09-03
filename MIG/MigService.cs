@@ -138,12 +138,10 @@ namespace MIG
                 {
                     if (iface.IsEnabled)
                     {
-                        Log.Debug("Enabling Interface {0}", iface.Domain);
                         EnableInterface(iface.Domain);
                     }
                     else
                     {
-                        Log.Debug("Disabling Interface {0}", iface.Domain);
                         DisableInterface(iface.Domain);
                     }
                 }
@@ -234,7 +232,7 @@ namespace MIG
             {
                 try
                 {
-                    var type = Type.GetType("MIG.Gateways." + className + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + assemblyName));
+                    var type = TypeLookup("MIG.Gateways." + className, assemblyName);
                     migGateway = (MigGateway)Activator.CreateInstance(type);
                 }
                 catch (Exception e)
@@ -294,12 +292,7 @@ namespace MIG
             {
                 try
                 {
-                    // TODO: move this type resolution block to an utility function
-                    var type = Type.GetType("MIG.Interfaces." + domain + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + Path.Combine("mig", assemblyName)));
-                    if (type == null)
-                        type = Type.GetType("MIG.Interfaces." + domain + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + Path.Combine("lib", assemblyName)));
-                    if (type == null)
-                        type = Type.GetType("MIG.Interfaces." + domain + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + assemblyName));
+                    var type = TypeLookup("MIG.Interfaces." + domain, assemblyName);
                     migInterface = (MigInterface)Activator.CreateInstance(type);
                 }
                 catch (Exception e)
@@ -465,6 +458,24 @@ namespace MIG
             process.Start();
         }
 
+        public static Type TypeLookup(string typeName, string assemblyName)
+        {
+            var type = Type.GetType(typeName + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + Path.Combine("lib", "mig", assemblyName)));
+            if (type == null)
+                type = Type.GetType(typeName + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + Path.Combine("lib", assemblyName)));
+            if (type == null)
+                type = Type.GetType(typeName + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + assemblyName));
+            return type;
+        }
+
+        public static string GetAssemblyDirectory(Assembly assembly)
+        {
+            string codeBase = assembly.CodeBase;
+            UriBuilder uri = new UriBuilder(codeBase);
+            string path = Uri.UnescapeDataString(uri.Path);
+            return Path.GetDirectoryName(path);
+        }
+
         #endregion
 
         #endregion
@@ -613,10 +624,10 @@ namespace MIG
                     let domain = ns.Substring(ns.LastIndexOf(".") + 1) + "." + miginterface.GetType().Name
                     where (command.Domain != null && command.Domain.StartsWith(domain))
                     select miginterface).FirstOrDefault();
-                if (iface != null && iface.IsEnabled)
+                if (iface != null) // && iface.IsEnabled)
                 {
-                    if (iface.IsConnected)
-                    {
+                    //if (iface.IsConnected)
+                    //{
                         try
                         {
                             request.ResponseData = iface.InterfaceControl(command);
@@ -625,11 +636,11 @@ namespace MIG
                         {
                             request.ResponseData = new ResponseStatus(Status.Error, MigService.JsonSerialize(ex));
                         }
-                    }
-                    else
-                    {
-                        request.ResponseData = new ResponseStatus(Status.Error, String.Format("Interface '{0}' not connected", iface.GetDomain()));
-                    }
+                    //}
+                    //else
+                    //{
+                    //    request.ResponseData = new ResponseStatus(Status.Error, String.Format("Interface '{0}' not connected", iface.GetDomain()));
+                    //}
                 }
                 // Try processing as Dynamic API
                 if ((request.ResponseData == null || request.ResponseData.Equals(String.Empty)))
