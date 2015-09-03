@@ -567,16 +567,16 @@ namespace MIG
                     if (command.GetOption(0) == "1")
                     {
                         if (EnableInterface(command.Address) != null)
-                            request.ResponseData = new ResponseStatus(Status.Ok, "Interface enabled");
+                            request.ResponseData = new ResponseStatus(Status.Ok, String.Format("Interface {0} enabled", command.Address));
                         else
-                            request.ResponseData = new ResponseStatus(Status.Error, "Interface not found");
+                            request.ResponseData = new ResponseStatus(Status.Error, String.Format("Interface {0} not found", command.Address));
                     }
                     else
                     {
                         if (DisableInterface(command.Address) != null)
-                            request.ResponseData = new ResponseStatus(Status.Ok, "Interface disabled");
+                            request.ResponseData = new ResponseStatus(Status.Ok, String.Format("Interface {0} disabled", command.Address));
                         else
-                            request.ResponseData = new ResponseStatus(Status.Error, "Interface not found");
+                            request.ResponseData = new ResponseStatus(Status.Error, String.Format("Interface {0} not found", command.Address));
                     }
                     OnInterfacePropertyChanged(new InterfacePropertyChangedEventArgs("MIGService.Interfaces", command.Address, "MIG Interface", "Status.IsEnabled", command.GetOption(0)));
                     break;
@@ -589,11 +589,11 @@ namespace MIG
                         if (iface != null)
                         {
                             iface.SetOption(command.GetOption(0), command.GetOption(1));
-                            request.ResponseData = new ResponseStatus(Status.Ok, String.Format("Option '{0}' set to '{1}'", command.GetOption(0), command.GetOption(1)));
+                            request.ResponseData = new ResponseStatus(Status.Ok, String.Format("{0} option '{1}' set to '{2}'", command.Address, command.GetOption(0), command.GetOption(1)));
                         }
                         else
                         {
-                            request.ResponseData = new ResponseStatus(Status.Error, "Interface not found");
+                            request.ResponseData = new ResponseStatus(Status.Error, String.Format("Interface {0} not found", command.Address));
                         }
                     }
                     OnInterfacePropertyChanged(new InterfacePropertyChangedEventArgs("MIGService.Interfaces", command.Address, "MIG Interface", "Options." + command.GetOption(0), command.GetOption(1)));
@@ -608,7 +608,7 @@ namespace MIG
                         }
                         else
                         {
-                            request.ResponseData = new ResponseStatus(Status.Error, "Interface not found");
+                            request.ResponseData = new ResponseStatus(Status.Error, String.Format("Interface {0} not found", command.Address));
                         }
                     }
                     break;

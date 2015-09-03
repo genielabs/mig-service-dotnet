@@ -46,7 +46,6 @@ namespace MIG
 
         public static void SetOption(this MigGateway gateway, string option, string value)
         {
-            MigService.Log.Trace("{0}: {1}={2}", gateway.GetName(), option, value);
             var opt = gateway.GetOption(option);
             if (opt == null)
             {
