@@ -28,7 +28,7 @@ namespace MIG
     [Serializable()]
     public class MigEvent
     {
-        public DateTime Timestamp = DateTime.UtcNow;
+        public DateTime Timestamp { get; set; }
 
         public double UnixTimestamp
         {
@@ -47,6 +47,7 @@ namespace MIG
 
         public MigEvent(string domain, string source, string description, string propertyPath, object propertyValue)
         {
+            Timestamp = DateTime.UtcNow;
             Domain = domain;
             Source = source;
             Description = description;

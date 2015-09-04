@@ -70,9 +70,9 @@ namespace MIG.Gateways
     {
         public event PreProcessRequestEventHandler PreProcessRequest;
         public event PostProcessRequestEventHandler PostProcessRequest;
+        private event InterfacePropertyChangedEventHandler PropertyChanged;
 
-        private MigEvent lastEvent;
-        private readonly object interfaceEvent = new object();
+        private readonly object eventLock = new object();
 
         private ManualResetEvent stopEvent = new ManualResetEvent(false);
 
@@ -122,11 +122,9 @@ namespace MIG.Gateways
 
         public void OnInterfacePropertyChanged(object sender, InterfacePropertyChangedEventArgs args)
         {
-            lock (interfaceEvent)
-            {
-                lastEvent = args.EventData;
-                Monitor.PulseAll(interfaceEvent);
-            }
+            if (PropertyChanged != null)
+                lock (eventLock)
+                    PropertyChanged(this, args);
         }
 
         public bool Start()
@@ -173,8 +171,8 @@ namespace MIG.Gateways
                     try
                     {
                         CultureInfo culture = CultureInfo.CreateSpecificCulture(request.UserLanguages[0].ToLowerInvariant().Trim());
-                        System.Threading.Thread.CurrentThread.CurrentCulture = culture;
-                        System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                        Thread.CurrentThread.CurrentCulture = culture;
+                        Thread.CurrentThread.CurrentUICulture = culture;
                     }
                     catch
                     {
@@ -183,7 +181,7 @@ namespace MIG.Gateways
                 //
                 if (request.IsSecureConnection)
                 {
-                    var clientCertificate = context.Request.GetClientCertificate();
+                    var clientCertificate = request.GetClientCertificate();
                     X509Chain chain = new X509Chain();
                     chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                     chain.Build(clientCertificate);
@@ -196,14 +194,11 @@ namespace MIG.Gateways
                     }
                 }
                 //
-                context.Response.AddHeader("Server", "MIG WebService Gateway");
-                //context.Response.Headers.Remove(HttpResponseHeader.Server);
-                //context.Response.Headers.Set(HttpResponseHeader.Server, "MIG WebService Gateway");
-                //
+                response.Headers.Set(HttpResponseHeader.Server, "MIG WebService Gateway");
                 response.KeepAlive = false;
                 //
                 bool isAuthenticated = (request.Headers["Authorization"] != null);
-                string remoteAddress = context.Request.RemoteEndPoint.Address.ToString();
+                string remoteAddress = request.RemoteEndPoint.Address.ToString();
                 //
                 if (servicePassword == "" || isAuthenticated) //request.IsAuthenticated)
                 {
@@ -256,40 +251,44 @@ namespace MIG.Gateways
                             if (url.TrimEnd('/').Equals("events"))
                             {
                                 // Server sent events
+                                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1}", response.StatusCode, request.RawUrl)));
                                 // NOTE: no PreProcess or PostProcess events are fired in this case
-                                //context.Response.KeepAlive = true;
-                                context.Response.ContentEncoding = Encoding.UTF8;
-                                context.Response.ContentType = "text/event-stream";
-                                context.Response.AddHeader("Cache-Control", "no-cache");
-                                context.Response.AddHeader("Access-Control-Allow-Origin", "*");
+                                //response.KeepAlive = true;
+                                response.ContentEncoding = Encoding.UTF8;
+                                response.ContentType = "text/event-stream";
+                                response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache");
+                                response.Headers.Set("Access-Control-Allow-Origin", "*");
 
                                 // 2K padding for IE
                                 var padding = ":" + new String(' ', 2048) + "\n";
                                 byte[] paddingData = System.Text.Encoding.UTF8.GetBytes(padding);
-                                context.Response.OutputStream.Write(paddingData, 0, paddingData.Length);
+                                response.OutputStream.Write(paddingData, 0, paddingData.Length);
                                 byte[] retryData = System.Text.Encoding.UTF8.GetBytes("retry: 1000\n");
-                                context.Response.OutputStream.Write(retryData, 0, retryData.Length);
-                                context.Response.OutputStream.Flush();
+                                response.OutputStream.Write(retryData, 0, retryData.Length);
+                                response.OutputStream.Flush();
 
-                                while (true)
-                                {
+                                bool connected = true;
+                                InterfacePropertyChangedEventHandler changedDelegate = (object sender, InterfacePropertyChangedEventArgs args) => {
                                     try
                                     {
-                                        lock (interfaceEvent)
-                                        {
-                                            Monitor.Wait(interfaceEvent);
-                                            // TODO: event data should not contains \n character, so these should be stripped or escaped
-                                            byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + lastEvent.Timestamp.ToString("R", CultureInfo.InvariantCulture) + "\ndata: " + MigService.JsonSerialize(lastEvent) + "\n\n");
-                                            context.Response.OutputStream.Write(data, 0, data.Length);
-                                            context.Response.OutputStream.Flush();
-                                        }
+                                        // TODO: event data should not contains \n character, so these should be stripped or escaped
+                                        byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + args.EventData.Timestamp.Ticks + "\ndata: " + MigService.JsonSerialize(args.EventData) + "\n\n");
+                                        response.OutputStream.Write(data, 0, data.Length);
+                                        response.OutputStream.Flush();
                                     }
-                                    catch
+                                    catch (Exception e)
                                     {
-                                        // The client disconnected
-                                        break;
+                                        // Client disconnected
+                                        MigService.Log.Error(e);
+                                        connected = false;
                                     }
+                                };
+                                this.PropertyChanged += changedDelegate;
+                                while (connected)
+                                {
+                                    Thread.Sleep(1000);
                                 }
+                                this.PropertyChanged -= changedDelegate;
 
                                 return;
                             }
@@ -304,8 +303,8 @@ namespace MIG.Gateways
                                         var migContext = new MigContext(ContextSource.WebServiceGateway, context);
                                         migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(message));
                                         // Store POST data (if any) in the migRequest.RequestData field
-                                        migRequest.RequestData = WebServiceUtility.ReadToEnd(context.Request.InputStream);
-                                        migRequest.RequestText = context.Request.ContentEncoding.GetString(migRequest.RequestData);
+                                        migRequest.RequestData = WebServiceUtility.ReadToEnd(request.InputStream);
+                                        migRequest.RequestText = request.ContentEncoding.GetString(migRequest.RequestData);
                                     }
 
                                     OnPreProcessRequest(migRequest);
@@ -321,7 +320,7 @@ namespace MIG.Gateways
                                         string requestedFile = GetWebFilePath(url);
                                         if (!System.IO.File.Exists(requestedFile))
                                         {
-                                            context.Response.StatusCode = 404;
+                                            response.StatusCode = (int)HttpStatusCode.NotFound;
                                             WebServiceUtility.WriteStringToContext(context, "<h1>404 - Not Found</h1>");
                                         }
                                         else
@@ -329,133 +328,152 @@ namespace MIG.Gateways
                                             bool isText = false;
                                             if (url.ToLower().EndsWith(".js")) // || requestedurl.EndsWith(".json"))
                                             {
-                                                context.Response.ContentType = "text/javascript";
+                                                response.ContentType = "text/javascript";
                                                 isText = true;
                                             }
                                             else if (url.ToLower().EndsWith(".css"))
                                             {
-                                                context.Response.ContentType = "text/css";
+                                                response.ContentType = "text/css";
                                                 isText = true;
                                             }
                                             else if (url.ToLower().EndsWith(".zip"))
                                             {
-                                                context.Response.ContentType = "application/zip";
+                                                response.ContentType = "application/zip";
                                             }
                                             else if (url.ToLower().EndsWith(".png"))
                                             {
-                                                context.Response.ContentType = "image/png";
+                                                response.ContentType = "image/png";
                                             }
                                             else if (url.ToLower().EndsWith(".jpg"))
                                             {
-                                                context.Response.ContentType = "image/jpeg";
+                                                response.ContentType = "image/jpeg";
                                             }
                                             else if (url.ToLower().EndsWith(".gif"))
                                             {
-                                                context.Response.ContentType = "image/gif";
+                                                response.ContentType = "image/gif";
                                             }
                                             else if (url.ToLower().EndsWith(".mp3"))
                                             {
-                                                context.Response.ContentType = "audio/mp3";
+                                                response.ContentType = "audio/mp3";
                                             }
                                             else if (url.ToLower().EndsWith(".appcache"))
                                             {
-                                                context.Response.ContentType = "text/cache-manifest";
+                                                response.ContentType = "text/cache-manifest";
                                             }
                                             else
                                             {
-                                                context.Response.ContentType = "text/html";
+                                                response.ContentType = "text/html";
                                                 isText = true;
                                             }
 
                                             var file = new System.IO.FileInfo(requestedFile);
-                                            context.Response.AddHeader("Last-Modified", file.LastWriteTimeUtc.ToString("r"));
-                                            context.Response.Headers.Set(HttpResponseHeader.LastModified, file.LastWriteTimeUtc.ToString("r"));
-                                            // PRE PROCESS text output
-                                            if (isText)
+                                            bool modified = true;
+                                            if (request.Headers.AllKeys.Contains("If-Modified-Since"))
                                             {
-                                                try
-                                                {
-                                                    WebFile webFile = GetWebFile(requestedFile);
-                                                    context.Response.ContentEncoding = webFile.Encoding;
-                                                    context.Response.ContentType += "; charset=" + webFile.Encoding.BodyName;
-                                                    // We don't need to parse the content again if it's coming from the cache
-                                                    if (!webFile.IsCached)
-                                                    {
-                                                        string body = webFile.Content;
-                                                        if (requestedFile.EndsWith(".md"))
-                                                        {
-                                                            // Built-in Markdown files support
-                                                            body = CommonMark.CommonMarkConverter.Convert(body);
-                                                            // TODO: add a way to include HTML header and footer template to be appended to the
-                                                            // TODO: translated markdown text
-                                                        }
-                                                        else
-                                                        {
-                                                            // HTML file
-                                                            // replace prepocessor directives with values
-                                                            bool tagFound;
-                                                            do
-                                                            {
-                                                                tagFound = false;
-                                                                int ts = body.IndexOf("{include ");
-                                                                if (ts >= 0)
-                                                                {
-                                                                    int te = body.IndexOf("}", ts);
-                                                                    if (te > ts)
-                                                                    {
-                                                                        string rs = body.Substring(ts + (te - ts) + 1);
-                                                                        string cs = body.Substring(ts, te - ts + 1);
-                                                                        string ls = body.Substring(0, ts);
-                                                                        //
-                                                                        try
-                                                                        {
-                                                                            if (cs.StartsWith("{include "))
-                                                                            {
-                                                                                string fileName = cs.Substring(9).TrimEnd('}').Trim();
-                                                                                fileName = GetWebFilePath(fileName);
-                                                                                //
-                                                                                Encoding fileEncoding = DetectWebFileEncoding(fileName);
-                                                                                if (fileEncoding == null)
-                                                                                    fileEncoding = defaultWebFileEncoding;
-                                                                                var incFile = System.IO.File.ReadAllText(fileName, fileEncoding) + rs;
-                                                                                body = ls + incFile;
-                                                                            }
-                                                                        }
-                                                                        catch
-                                                                        {
-                                                                            body = ls + "<h5 style=\"color:red\">Error processing '" + cs.Replace("{", "[").Replace("}", "]") + "'</h5>" + rs;
-                                                                        }
-                                                                        tagFound = true;
-                                                                    }
-                                                                }
-                                                            } while (tagFound); // continue if a pre processor tag was found
-                                                            // {hostos}
-                                                            body = body.Replace("{hostos}", Environment.OSVersion.Platform.ToString());
-                                                            // {filebase}
-                                                            body = body.Replace("{filebase}", Path.GetFileNameWithoutExtension(requestedFile));
-                                                        }
-                                                        // update the cache content with parsing results
-                                                        webFile.Content = body;
-                                                    }
-                                                    // Store the cache item if the file cache is enabled
-                                                    if (enableFileCache)
-                                                    {
-                                                        UpdateWebFileCache(requestedFile, webFile.Content, context.Response.ContentEncoding);
-                                                    }
-                                                    //
-                                                    WebServiceUtility.WriteStringToContext(context, webFile.Content);
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    // TODO: report internal mig interface  error
-                                                    context.Response.StatusCode = 500;
-                                                    WebServiceUtility.WriteStringToContext(context, ex.Message + "\n" + ex.StackTrace);
-                                                    MigService.Log.Error(ex);
-                                                }
+                                                var modifiedSince = DateTime.MinValue;
+                                                DateTime.TryParse(request.Headers["If-Modified-Since"], out modifiedSince);
+                                                if (file.LastWriteTime.Equals(modifiedSince))
+                                                    modified = false;
+                                            }
+                                            if (!modified)
+                                            {
+                                                // TODO: !IMPORTANT! exclude from caching files that contains SSI tags!
+                                                response.StatusCode = (int)HttpStatusCode.NotModified;
+                                                response.Headers.Set(HttpResponseHeader.Date, file.LastWriteTimeUtc.ToString("r"));
                                             }
                                             else
                                             {
-                                                WebServiceUtility.WriteBytesToContext(context, System.IO.File.ReadAllBytes(requestedFile));
+                                                response.Headers.Set(HttpResponseHeader.LastModified, file.LastWriteTimeUtc.ToString("r"));
+                                                // enable caching for static files
+                                                response.Headers.Set(HttpResponseHeader.CacheControl, "max-age=86400");
+
+                                                // PRE PROCESS text output
+                                                if (isText)
+                                                {
+                                                    try
+                                                    {
+                                                        WebFile webFile = GetWebFile(requestedFile);
+                                                        response.ContentEncoding = webFile.Encoding;
+                                                        response.ContentType += "; charset=" + webFile.Encoding.BodyName;
+                                                        // We don't need to parse the content again if it's coming from the cache
+                                                        if (!webFile.IsCached)
+                                                        {
+                                                            string body = webFile.Content;
+                                                            if (requestedFile.EndsWith(".md"))
+                                                            {
+                                                                // Built-in Markdown files support
+                                                                body = CommonMark.CommonMarkConverter.Convert(body);
+                                                                // TODO: add a way to include HTML header and footer template to be appended to the
+                                                                // TODO: translated markdown text
+                                                            }
+                                                            else
+                                                            {
+                                                                // HTML file
+                                                                // replace prepocessor directives with values
+                                                                bool tagFound;
+                                                                do
+                                                                {
+                                                                    tagFound = false;
+                                                                    int ts = body.IndexOf("{include ");
+                                                                    if (ts >= 0)
+                                                                    {
+                                                                        int te = body.IndexOf("}", ts);
+                                                                        if (te > ts)
+                                                                        {
+                                                                            string rs = body.Substring(ts + (te - ts) + 1);
+                                                                            string cs = body.Substring(ts, te - ts + 1);
+                                                                            string ls = body.Substring(0, ts);
+                                                                            //
+                                                                            try
+                                                                            {
+                                                                                if (cs.StartsWith("{include "))
+                                                                                {
+                                                                                    string fileName = cs.Substring(9).TrimEnd('}').Trim();
+                                                                                    fileName = GetWebFilePath(fileName);
+                                                                                    //
+                                                                                    Encoding fileEncoding = DetectWebFileEncoding(fileName);
+                                                                                    if (fileEncoding == null)
+                                                                                        fileEncoding = defaultWebFileEncoding;
+                                                                                    var incFile = System.IO.File.ReadAllText(fileName, fileEncoding) + rs;
+                                                                                    body = ls + incFile;
+                                                                                }
+                                                                            }
+                                                                            catch
+                                                                            {
+                                                                                body = ls + "<h5 style=\"color:red\">Error processing '" + cs.Replace("{", "[").Replace("}", "]") + "'</h5>" + rs;
+                                                                            }
+                                                                            tagFound = true;
+                                                                        }
+                                                                    }
+                                                                } while (tagFound); // continue if a pre processor tag was found
+                                                                // {hostos}
+                                                                body = body.Replace("{hostos}", Environment.OSVersion.Platform.ToString());
+                                                                // {filebase}
+                                                                body = body.Replace("{filebase}", Path.GetFileNameWithoutExtension(requestedFile));
+                                                            }
+                                                            // update the cache content with parsing results
+                                                            webFile.Content = body;
+                                                        }
+                                                        // Store the cache item if the file cache is enabled
+                                                        if (enableFileCache)
+                                                        {
+                                                            UpdateWebFileCache(requestedFile, webFile.Content, response.ContentEncoding);
+                                                        }
+                                                        //
+                                                        WebServiceUtility.WriteStringToContext(context, webFile.Content);
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        // TODO: report internal mig interface  error
+                                                        response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                                                        WebServiceUtility.WriteStringToContext(context, ex.Message + "\n" + ex.StackTrace);
+                                                        MigService.Log.Error(ex);
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    WebServiceUtility.WriteBytesToContext(context, System.IO.File.ReadAllBytes(requestedFile));
+                                                }
                                             }
                                         }
                                         requestHandled = true;
@@ -469,7 +487,7 @@ namespace MIG.Gateways
                                     }
                                     else if (!requestHandled)
                                     {
-                                        context.Response.StatusCode = 404;
+                                        response.StatusCode = (int)HttpStatusCode.NotFound;
                                         WebServiceUtility.WriteStringToContext(context, "<h1>404 - Not Found</h1>");
                                     }
 
@@ -485,23 +503,15 @@ namespace MIG.Gateways
                     else
                     {
                         response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                        response.AddHeader("WWW-Authenticate", "Basic");
-                        //context.Response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
+                        response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                     }
                 }
                 else
                 {
                     response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                    response.AddHeader("WWW-Authenticate", "Basic");
-                    //context.Response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
+                    response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                 }
-                MigService.Log.Info(new MigEvent(
-                    this.GetName(),
-                    remoteAddress,
-                    "HTTP",
-                    request.HttpMethod.ToString(),
-                    String.Format("{0} {1}", response.StatusCode, request.RawUrl))
-                );
+                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1}", response.StatusCode, request.RawUrl)));
             }
             catch (Exception ex)
             {
