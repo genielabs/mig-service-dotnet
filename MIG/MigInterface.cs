@@ -50,7 +50,7 @@ namespace MIG
             var opt = iface.GetOption(option);
             if (opt == null)
             {
-                opt = new Option() { Name = option };
+                opt = new Option(option);
                 iface.Options.Add(opt);
             }
             opt.Value = value;

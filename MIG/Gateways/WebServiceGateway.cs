@@ -22,18 +22,20 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading;
-
-using System.Text;
-using System.IO;
-using System.Security.Cryptography.X509Certificates;
 using System.Globalization;
+using System.Linq;
+using System.IO;
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Security.Cryptography.X509Certificates;
 
 using Ude;
 using Ude.Core;
+
 using CommonMark;
+
 using MIG.Config;
 
 namespace MIG.Gateways
@@ -79,9 +81,10 @@ namespace MIG.Gateways
         // Web Service configuration fields
         private string baseUrl = "/";
         private string homePath = "html";
-        private string servicePassword = "";
         private string serviceHost = "*";
         private string servicePort = "8080";
+        private string serviceUsername = "admin";
+        private string servicePassword = "";
         private bool enableFileCache = false;
         private string[] bindingPrefixes;
 
@@ -91,6 +94,14 @@ namespace MIG.Gateways
 
         public WebServiceGateway()
         {
+            Options = new List<Option>();
+            Options.Add(new Option("BaseUrl", baseUrl));
+            Options.Add(new Option("HomePath", homePath));
+            Options.Add(new Option("Host", serviceHost));
+            Options.Add(new Option("Port", servicePort));
+            Options.Add(new Option("Username", serviceUsername));
+            Options.Add(new Option("Password", servicePassword));
+            Options.Add(new Option("EnableFileCaching", enableFileCache.ToString()));
         }
 
         public List<Option> Options { get; set; }
@@ -115,6 +126,7 @@ namespace MIG.Gateways
                 servicePassword = option.Value;
                 break;
             case "EnableFileCaching":
+                ClearWebCache();
                 bool.TryParse(option.Value, out enableFileCache);
                 break;
             }
@@ -154,6 +166,31 @@ namespace MIG.Gateways
         {
             Stop();
         }
+
+        private List<string> excludeCacheControlExp = new List<string>();
+
+        public void CacheControlIgnoreAdd(string regExpression)
+        {
+            var expr = excludeCacheControlExp.Find(e => e.Equals(regExpression));
+            if (expr == null)
+                excludeCacheControlExp.Add(regExpression);
+        }
+
+        private bool CacheControlIgnoreCheck(string url)
+        {
+            bool ignore = false;
+            for(int i = 0; i < excludeCacheControlExp.Count; i++)
+            {
+                var expr = new Regex(excludeCacheControlExp[i]);
+                if (expr.IsMatch(url))
+                {
+                    ignore = true;
+                    break;
+                }
+            }
+            return ignore;
+        }
+
 
         private void Worker(object state)
         {
@@ -226,7 +263,7 @@ namespace MIG.Gateways
                     //
                     //TODO: complete authorization (for now with one fixed user 'admin', add multiuser support)
                     //
-                    if (servicePassword == "" || (authUser == "admin" && Utility.Encryption.SHA1.GenerateHashString(authPass) == servicePassword))
+                    if (servicePassword == "" || (authUser == serviceUsername && Utility.Encryption.SHA1.GenerateHashString(authPass) == servicePassword))
                     {
                         verified = true;
                     }
@@ -279,7 +316,7 @@ namespace MIG.Gateways
                                     catch (Exception e)
                                     {
                                         // Client disconnected
-                                        MigService.Log.Error(e);
+                                        //MigService.Log.Error(e);
                                         connected = false;
                                     }
                                 };
@@ -375,7 +412,8 @@ namespace MIG.Gateways
                                                 if (file.LastWriteTime.Equals(modifiedSince))
                                                     modified = false;
                                             }
-                                            if (!modified)
+                                            bool disableCacheControl = CacheControlIgnoreCheck(url);
+                                            if (!modified && !disableCacheControl)
                                             {
                                                 // TODO: !IMPORTANT! exclude from caching files that contains SSI tags!
                                                 response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -384,8 +422,16 @@ namespace MIG.Gateways
                                             else
                                             {
                                                 response.Headers.Set(HttpResponseHeader.LastModified, file.LastWriteTimeUtc.ToString("r"));
-                                                // enable caching for static files
-                                                response.Headers.Set(HttpResponseHeader.CacheControl, "max-age=86400");
+                                                if (disableCacheControl)
+                                                {
+                                                    response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache, no-store, must-revalidate");
+                                                    response.Headers.Set(HttpResponseHeader.Pragma, "no-cache");
+                                                    response.Headers.Set(HttpResponseHeader.Expires, "0");
+                                                }
+                                                else
+                                                {
+                                                    response.Headers.Set(HttpResponseHeader.CacheControl, "max-age=86400");
+                                                }
 
                                                 // PRE PROCESS text output
                                                 if (isText)
@@ -537,6 +583,8 @@ namespace MIG.Gateways
             }
         }
 
+        #region Client Connection management
+
         private void SendResponseObject(HttpListenerContext context, object responseObject)
         {
             if (responseObject != null && responseObject.GetType().Equals(typeof(byte[])) == false)
@@ -620,6 +668,8 @@ namespace MIG.Gateways
                 return;
             Worker(context);
         }
+
+        #endregion
 
         #region Web Service File Management
 

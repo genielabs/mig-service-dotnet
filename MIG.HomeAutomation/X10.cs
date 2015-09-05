@@ -86,8 +86,10 @@ namespace MIG.Interfaces.HomeAutomation
             set
             {
                 options = value;
-                x10lib.PortName = this.GetOption("Port").Value.Replace("|", "/");
-                x10lib.HouseCode = this.GetOption("HouseCodes").Value;
+                if (this.GetOption("Port") != null)
+                    x10lib.PortName = this.GetOption("Port").Value.Replace("|", "/");
+                if (this.GetOption("HouseCodes") != null)
+                    x10lib.HouseCode = this.GetOption("HouseCodes").Value;
             }
         }
 

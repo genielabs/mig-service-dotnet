@@ -65,6 +65,16 @@ namespace MIG.Config
 
         [XmlAttribute]
         public string Value { get; set; }
+
+        public Option()
+        {
+        }
+
+        public Option(string name, string value = "")
+        {
+            Name = name;
+            Value = value;
+        }
     }
 
     [Serializable]

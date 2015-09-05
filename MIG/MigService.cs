@@ -253,16 +253,17 @@ namespace MIG
             {
                 config = new Gateway();
                 config.Name = migGateway.GetName();
-                config.Options = new List<Option>();
+                if (config.Options == null)
+                    config.Options = new List<Option>();
                 configuration.Gateways.Add(config);
             }
             if (migGateway != null)
             {
                 Log.Debug("Setting Gateway options");
-                migGateway.Options = configuration.GetGateway(migGateway.GetName()).Options;
-                foreach (var opt in migGateway.Options)
+                if (migGateway.Options == null)
+                    migGateway.Options = new List<Option>();
+                foreach (var opt in configuration.GetGateway(migGateway.GetName()).Options)
                 {
-                    Log.Debug("{0}: {1}={2}", migGateway.GetName(), opt.Name, opt.Value);
                     migGateway.SetOption(opt.Name, opt.Value);
                 }
             }
@@ -313,14 +314,16 @@ namespace MIG
             {
                 config = new Interface();
                 config.Domain = domain;
-                config.Options = new List<Option>();
+                if (config.Options == null)
+                    config.Options = new List<Option>();
                 configuration.Interfaces.Add(config);
             }
             if (migInterface != null)
             {
                 Log.Debug("Setting Interface options");
-                migInterface.Options = config.Options;
-                foreach (var opt in migInterface.Options)
+                if (migInterface.Options == null)
+                    migInterface.Options = new List<Option>();
+                foreach (var opt in config.Options)
                 {
                     migInterface.SetOption(opt.Name, opt.Value);
                 }

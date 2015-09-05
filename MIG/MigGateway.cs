@@ -46,10 +46,11 @@ namespace MIG
 
         public static void SetOption(this MigGateway gateway, string option, string value)
         {
+            MigService.Log.Debug("{0}: {1}={2}", gateway.GetName(), option, value);
             var opt = gateway.GetOption(option);
             if (opt == null)
             {
-                opt = new Option() { Name = option };
+                opt = new Option(option);
                 gateway.Options.Add(opt);
             }
             opt.Value = value;
