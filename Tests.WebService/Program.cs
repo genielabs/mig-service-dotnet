@@ -35,6 +35,10 @@ namespace Tests.WebService
             zwave.SetOption("Port", "/dev/ttyUSB0");
             migService.EnableInterface("HomeAutomation.ZWave");
             */
+            /*
+            var upnp = migService.AddInterface("Protocols.UPnP", "MIG.Protocols.dll");
+            migService.EnableInterface("Protocols.UPnP");
+            */
 
             migService.StartService();
 

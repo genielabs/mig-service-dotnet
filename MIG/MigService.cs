@@ -121,16 +121,16 @@ namespace MIG
         /// <returns><c>true</c>, if service was started, <c>false</c> otherwise.</returns>
         public bool StartService()
         {
-            bool success = false;
+            bool success = true;
             try
             {
                 // Start MIG Gateways
                 foreach (var gw in Gateways)
                 {
-                    Log.Debug("Starting Gateway {0}", gw.GetName());
                     if (!gw.Start())
                     {
                         Log.Warn("Error starting Gateway {0}", gw.GetName());
+                        success = false;
                     }
                 }
                 // Initialize MIG Interfaces
@@ -145,11 +145,11 @@ namespace MIG
                         DisableInterface(iface.Domain);
                     }
                 }
-                success = true;
             }
             catch (Exception e)
             {
                 MigService.Log.Error(e);
+                success = false;
             }
             return success;
         }
@@ -162,18 +162,16 @@ namespace MIG
             Log.Debug("Stopping MigService");
             foreach (var migInterface in Interfaces)
             {
-                Log.Debug("Disposing Interface {0}", migInterface.GetDomain());
-                migInterface.Disconnect();
+                Log.Debug("Disabling Interface {0}", migInterface.GetDomain());
+                DisableInterface(migInterface.GetDomain());
             }
             foreach (var gw in Gateways)
             {
-                Log.Debug("Disposing Gateway {0}", gw.GetName());
-                // TODO: gw.Stop();
+                Log.Debug("Stopping Gateway {0}", gw.GetName());
+                gw.Stop();
             }
             Log.Debug("Stopped MigService");
         }
-
-        //TODO: implement a ShutDown/Dispose method that releases all interfaces and related resources
 
         #endregion
 
@@ -260,8 +258,7 @@ namespace MIG
             if (migGateway != null)
             {
                 Log.Debug("Setting Gateway options");
-                if (migGateway.Options == null)
-                    migGateway.Options = new List<Option>();
+                migGateway.Options = config.Options;
                 foreach (var opt in configuration.GetGateway(migGateway.GetName()).Options)
                 {
                     migGateway.SetOption(opt.Name, opt.Value);
@@ -321,8 +318,7 @@ namespace MIG
             if (migInterface != null)
             {
                 Log.Debug("Setting Interface options");
-                if (migInterface.Options == null)
-                    migInterface.Options = new List<Option>();
+                migInterface.Options = config.Options;
                 foreach (var opt in config.Options)
                 {
                     migInterface.SetOption(opt.Name, opt.Value);

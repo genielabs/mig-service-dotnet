@@ -75,7 +75,6 @@ namespace MIG.Gateways
         private event InterfacePropertyChangedEventHandler PropertyChanged;
 
         private readonly object eventLock = new object();
-
         private ManualResetEvent stopEvent = new ManualResetEvent(false);
 
         // Web Service configuration fields
@@ -86,22 +85,14 @@ namespace MIG.Gateways
         private string serviceUsername = "admin";
         private string servicePassword = "";
         private bool enableFileCache = false;
-        private string[] bindingPrefixes;
 
         private Encoding defaultWebFileEncoding = Encoding.GetEncoding("UTF-8");
 
-        private List<WebFile> webFileCache = new List<WebFile>();
+        private List<WebFile> filesCache = new List<WebFile>();
+        private List<string> httpCacheIgnoreList = new List<string>();
 
         public WebServiceGateway()
         {
-            Options = new List<Option>();
-            Options.Add(new Option("BaseUrl", baseUrl));
-            Options.Add(new Option("HomePath", homePath));
-            Options.Add(new Option("Host", serviceHost));
-            Options.Add(new Option("Port", servicePort));
-            Options.Add(new Option("Username", serviceUsername));
-            Options.Add(new Option("Password", servicePassword));
-            Options.Add(new Option("EnableFileCaching", enableFileCache.ToString()));
         }
 
         public List<Option> Options { get; set; }
@@ -129,6 +120,10 @@ namespace MIG.Gateways
                 ClearWebCache();
                 bool.TryParse(option.Value, out enableFileCache);
                 break;
+            default:
+                if (option.Name.StartsWith("HttpCacheIgnore."))
+                    HttpCacheIgnoreAdd(option.Value);
+                break;
             }
         }
 
@@ -141,13 +136,14 @@ namespace MIG.Gateways
 
         public bool Start()
         {
+            MigService.Log.Debug("Starting Gateway {0}", this.GetName());
             bool success = false;
-            bindingPrefixes = new string[1] { 
+            string[] bindingPrefixes = new string[1] { 
                 String.Format(@"http://{0}:{1}/", serviceHost, servicePort)
             };
             try
             {
-                ListenAsynchronously(bindingPrefixes);
+                StartListener(bindingPrefixes);
                 success = true;
             }
             catch (Exception e)
@@ -159,38 +155,13 @@ namespace MIG.Gateways
 
         public void Stop()
         {
-            StopListening();
+            StopListener();
         }
 
         public void Dispose()
         {
             Stop();
         }
-
-        private List<string> excludeCacheControlExp = new List<string>();
-
-        public void CacheControlIgnoreAdd(string regExpression)
-        {
-            var expr = excludeCacheControlExp.Find(e => e.Equals(regExpression));
-            if (expr == null)
-                excludeCacheControlExp.Add(regExpression);
-        }
-
-        private bool CacheControlIgnoreCheck(string url)
-        {
-            bool ignore = false;
-            for(int i = 0; i < excludeCacheControlExp.Count; i++)
-            {
-                var expr = new Regex(excludeCacheControlExp[i]);
-                if (expr.IsMatch(url))
-                {
-                    ignore = true;
-                    break;
-                }
-            }
-            return ignore;
-        }
-
 
         private void Worker(object state)
         {
@@ -339,6 +310,10 @@ namespace MIG.Gateways
                                         string message = url.Substring(url.IndexOf('/', 1) + 1);
                                         var migContext = new MigContext(ContextSource.WebServiceGateway, context);
                                         migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(message));
+                                        // Disable HTTP caching
+                                        response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache, no-store, must-revalidate");
+                                        response.Headers.Set(HttpResponseHeader.Pragma, "no-cache");
+                                        response.Headers.Set(HttpResponseHeader.Expires, "0");
                                         // Store POST data (if any) in the migRequest.RequestData field
                                         migRequest.RequestData = WebServiceUtility.ReadToEnd(request.InputStream);
                                         migRequest.RequestText = request.ContentEncoding.GetString(migRequest.RequestData);
@@ -412,7 +387,7 @@ namespace MIG.Gateways
                                                 if (file.LastWriteTime.Equals(modifiedSince))
                                                     modified = false;
                                             }
-                                            bool disableCacheControl = CacheControlIgnoreCheck(url);
+                                            bool disableCacheControl = HttpCacheIgnoreCheck(url);
                                             if (!modified && !disableCacheControl)
                                             {
                                                 // TODO: !IMPORTANT! exclude from caching files that contains SSI tags!
@@ -614,8 +589,9 @@ namespace MIG.Gateways
             }
         }
 
-        private void ListenAsynchronously(IEnumerable<string> prefixes)
+        private void StartListener(IEnumerable<string> prefixes)
         {
+            stopEvent.Reset();
             HttpListener listener = new HttpListener();
             foreach (string s in prefixes)
             {
@@ -626,7 +602,7 @@ namespace MIG.Gateways
             ThreadPool.QueueUserWorkItem(Listen, state);
         }
 
-        private void StopListening()
+        private void StopListener()
         {
             stopEvent.Set();
         }
@@ -640,8 +616,15 @@ namespace MIG.Gateways
                 int n = WaitHandle.WaitAny(new WaitHandle[] { callbackState.ListenForNextRequest, stopEvent });
                 if (n == 1)
                 {
-                    // stopEvent was signalled 
-                    callbackState.Listener.Stop();
+                    // stopEvent was signaled 
+                    try
+                    {
+                        callbackState.Listener.Stop();
+                    }
+                    catch (Exception e)
+                    {
+                        MigService.Log.Error(e);
+                    }
                     break;
                 }
             }
@@ -671,15 +654,40 @@ namespace MIG.Gateways
 
         #endregion
 
-        #region Web Service File Management
+        #region HTTP Caching Ignore List
 
-        //
+        private void HttpCacheIgnoreAdd(string regExpression)
+        {
+            var expr = httpCacheIgnoreList.Find(e => e.Equals(regExpression));
+            if (expr == null)
+                httpCacheIgnoreList.Add(regExpression);
+        }
+
+        private bool HttpCacheIgnoreCheck(string url)
+        {
+            bool ignore = false;
+            for(int i = 0; i < httpCacheIgnoreList.Count; i++)
+            {
+                var expr = new Regex(httpCacheIgnoreList[i]);
+                if (expr.IsMatch(url))
+                {
+                    ignore = true;
+                    break;
+                }
+            }
+            return ignore;
+        }
+
+        #endregion
+
+        #region HTTP Files Management and Caching
+
         private WebFile GetWebFile(string file)
         {
             WebFile fileItem = new WebFile(), cachedItem = null;
             try
             {
-                cachedItem = webFileCache.Find(wfc => wfc.FilePath == file);
+                cachedItem = filesCache.Find(wfc => wfc.FilePath == file);
             }
             catch (Exception ex)
             {
@@ -702,7 +710,7 @@ namespace MIG.Gateways
                 fileItem.Encoding = fileEncoding;
                 if (cachedItem != null)
                 {
-                    webFileCache.Remove(cachedItem);
+                    filesCache.Remove(cachedItem);
                 }
             }
             return fileItem;
@@ -710,7 +718,7 @@ namespace MIG.Gateways
 
         public void ClearWebCache()
         {
-            webFileCache.Clear();
+            filesCache.Clear();
         }
 
         private Encoding DetectWebFileEncoding(string filename)
@@ -737,11 +745,11 @@ namespace MIG.Gateways
 
         private void UpdateWebFileCache(string file, string content, Encoding encoding)
         {
-            var cachedItem = webFileCache.Find(wfc => wfc.FilePath == file);
+            var cachedItem = filesCache.Find(wfc => wfc.FilePath == file);
             if (cachedItem == null)
             {
                 cachedItem = new WebFile();
-                webFileCache.Add(cachedItem);
+                filesCache.Add(cachedItem);
             }
             cachedItem.FilePath = file;
             cachedItem.Content = content;

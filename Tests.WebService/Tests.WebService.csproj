@@ -47,6 +47,10 @@
       <Project>{8C90AAEE-6245-4F6F-9D4A-854300C662F6}</Project>
       <Name>MIG.HomeAutomation</Name>
     </ProjectReference>
+    <ProjectReference Include="..\MIG.Protocols\MIG.Protocols.csproj">
+      <Project>{C7538C18-D328-4509-B5D7-CDA0491F90F5}</Project>
+      <Name>MIG.Protocols</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="html\" />
