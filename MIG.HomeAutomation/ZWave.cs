@@ -923,6 +923,10 @@ namespace MIG.Interfaces.HomeAutomation
                 case EventParameter.SecurityNodeInformationFrame:
                     eventPath = "ZWaveNode.SecuredNodeInfo";
                     break;
+                case EventParameter.VersionCommandClass:
+                    eventPath = "ZWaveNode.Version." + (eventValue as ZWaveLib.Values.VersionValue).CmdClass;
+                    eventValue = (eventValue as ZWaveLib.Values.VersionValue).Version;
+                    break;
                 default:
                     MigService.Log.Warn("Unhandled event from node {0} (Event={1}, Id={2}, Value={3})", eventData.Node.Id, eventData.Parameter, eventData.Instance, eventValue);
                     break;

@@ -80,7 +80,7 @@ namespace MIG.Interfaces.Protocols
             AvMedia_Pause,
             AvMedia_Stop,
 
-            AvMedia_Previous,
+            AvMedia_Prev,
             AvMedia_Next,
             AvMedia_SetNext,
 
@@ -467,7 +467,7 @@ namespace MIG.Interfaces.Protocols
                     InvokeUpnpDeviceService(device, "AVTransport", "Stop", args);
                 }
                 break;
-            case Commands.AvMedia_Previous:
+            case Commands.AvMedia_Prev:
                 {
                     var instanceId = new UPnPArgument("InstanceID", (uint)0);
                     var args = new UPnPArgument[] { 

@@ -90,6 +90,7 @@ namespace MIG.Gateways
 
         private List<WebFile> filesCache = new List<WebFile>();
         private List<string> httpCacheIgnoreList = new List<string>();
+        private List<string> urlAliases = new List<string>();
 
         public WebServiceGateway()
         {
@@ -123,6 +124,8 @@ namespace MIG.Gateways
             default:
                 if (option.Name.StartsWith("HttpCacheIgnore."))
                     HttpCacheIgnoreAdd(option.Value);
+                else if (option.Name.StartsWith("UrlAlias."))
+                    UrlAliasAdd(option.Value);
                 break;
             }
         }
@@ -244,6 +247,8 @@ namespace MIG.Gateways
                         string url = request.RawUrl.TrimStart('/').TrimStart('\\').TrimStart('.');
                         if (url.IndexOf("?") > 0)
                             url = url.Substring(0, url.IndexOf("?"));
+                        // Check if this url is an alias
+                        url = UrlAliasCheck(url.TrimEnd('/'));
                         //
                         // url aliasing check
                         if (url == "" || url.TrimEnd('/') == baseUrl.TrimEnd('/'))
@@ -654,12 +659,30 @@ namespace MIG.Gateways
 
         #endregion
 
+        #region URL Aliases
+
+        private void UrlAliasAdd(string alias)
+        {
+            if (!urlAliases.Contains(alias))
+                urlAliases.Add(alias);
+        }
+
+        private string UrlAliasCheck(string url)
+        {
+            var alias = urlAliases.Find(a => a.StartsWith(url + ":"));
+            if (alias != null)
+                return alias.Substring(alias.IndexOf(":") + 1);
+            else
+                return url;
+        }
+
+        #endregion
+
         #region HTTP Caching Ignore List
 
         private void HttpCacheIgnoreAdd(string regExpression)
         {
-            var expr = httpCacheIgnoreList.Find(e => e.Equals(regExpression));
-            if (expr == null)
+            if (!httpCacheIgnoreList.Contains(regExpression))
                 httpCacheIgnoreList.Add(regExpression);
         }
 
