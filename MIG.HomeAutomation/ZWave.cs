@@ -722,7 +722,7 @@ namespace MIG.Interfaces.HomeAutomation
                 OnInterfacePropertyChanged(this.GetDomain(), "1", "Z-Wave Controller", "Controller.Status", "Node " + args.NodeId + " response timeout!");
                 break;
             default:
-                OnInterfacePropertyChanged(this.GetDomain(), "1", "Z-Wave Controller", "Controller.Status", args.Status.ToString());
+                OnInterfacePropertyChanged(this.GetDomain(), "1", "Z-Wave Controller", "Controller.Status", String.Format("Node {0} Status {1}", args.NodeId, args.Status.ToString()));
                 break;
             }
         }

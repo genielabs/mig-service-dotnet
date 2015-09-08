@@ -315,34 +315,49 @@ namespace MIG.Interfaces.HomeAutomation
             {
             case X10RfSecurityEvent.DoorSensor1_Alert:
             case X10RfSecurityEvent.DoorSensor2_Alert:
-                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Module", ModuleEvents.Status_Level, 1);
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Status_Level, 1);
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Sensor_Tamper, 0);
+                break;
+            case X10RfSecurityEvent.DoorSensor1_Alert_Tarmper:
+            case X10RfSecurityEvent.DoorSensor2_Alert_Tamper:
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Status_Level, 1);
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Sensor_Tamper, 1);
                 break;
             case X10RfSecurityEvent.DoorSensor1_Normal:
             case X10RfSecurityEvent.DoorSensor2_Normal:
-                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Module", ModuleEvents.Status_Level, 0);
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Status_Level, 0);
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Sensor_Tamper, 0);
+                break;
+            case X10RfSecurityEvent.DoorSensor1_Normal_Tamper:
+            case X10RfSecurityEvent.DoorSensor2_Normal_Tamper:
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Status_Level, 0);
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Sensor_Tamper, 1);
                 break;
             case X10RfSecurityEvent.DoorSensor1_BatteryLow:
             case X10RfSecurityEvent.DoorSensor2_BatteryLow:
-                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Module", ModuleEvents.Status_Battery, 10);
+            case X10RfSecurityEvent.Motion_BatteryLow:
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Status_Battery, 10);
                 break;
             case X10RfSecurityEvent.DoorSensor1_BatteryOk:
             case X10RfSecurityEvent.DoorSensor2_BatteryOk:
-                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Module", ModuleEvents.Status_Battery, 100);
+            case X10RfSecurityEvent.Motion_BatteryOk:
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Status_Battery, 100);
                 break;
             case X10RfSecurityEvent.Motion_Alert:
-                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Module", ModuleEvents.Status_Level, 1);
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Status_Level, 1);
                 break;
             case X10RfSecurityEvent.Motion_Normal:
-                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Module", ModuleEvents.Status_Level, 0);
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Sensor", ModuleEvents.Status_Level, 0);
                 break;
             case X10RfSecurityEvent.Remote_Arm:
             case X10RfSecurityEvent.Remote_Disarm:
             case X10RfSecurityEvent.Remote_Panic:
+            case X10RfSecurityEvent.Remote_Panic_15:
             case X10RfSecurityEvent.Remote_LightOn:
             case X10RfSecurityEvent.Remote_LightOff:
                 var evt = args.Event.ToString();
                 evt = evt.Substring(evt.IndexOf('_') + 1);
-                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Module", ModuleEvents.Sensor_Key, evt);
+                OnInterfacePropertyChanged(module.Domain, module.Address, "X10 Security Remote", ModuleEvents.Sensor_Key, evt);
                 break;
             }
         }

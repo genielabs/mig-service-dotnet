@@ -163,7 +163,8 @@ namespace MIG
             foreach (var migInterface in Interfaces)
             {
                 Log.Debug("Disabling Interface {0}", migInterface.GetDomain());
-                DisableInterface(migInterface.GetDomain());
+                migInterface.IsEnabled = false;
+                migInterface.Disconnect();
             }
             foreach (var gw in Gateways)
             {
