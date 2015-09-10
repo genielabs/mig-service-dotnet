@@ -455,16 +455,53 @@ namespace MIG
             processInfo.CreateNoWindow = true;
             var process = new System.Diagnostics.Process();
             process.StartInfo = processInfo;
-            process.Start();
+            try
+            {
+                process.Start();
+            }
+            catch (Exception e) 
+            {
+                Log.Error(e);
+            }
         }
 
         public static Type TypeLookup(string typeName, string assemblyName)
         {
-            var type = Type.GetType(typeName + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + Path.Combine("lib", "mig", assemblyName)));
-            if (type == null)
-                type = Type.GetType(typeName + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + Path.Combine("lib", assemblyName)));
-            if (type == null)
-                type = Type.GetType(typeName + (String.IsNullOrWhiteSpace(assemblyName) ? "" : ", " + assemblyName));
+            Type type = null;
+            if (!String.IsNullOrWhiteSpace(assemblyName))
+            {
+                Assembly assembly = null;
+                try
+                {
+                    assembly = AppDomain.CurrentDomain.Load(Path.GetFileNameWithoutExtension(assemblyName));
+                }
+                catch
+                { 
+                    try
+                    {
+                        assembly = Assembly.LoadFrom(Path.Combine("lib", "mig", assemblyName));
+                    }
+                    catch
+                    { 
+                        try
+                        {
+                            assembly = Assembly.LoadFrom(Path.Combine("lib", assemblyName));
+                        }
+                        catch
+                        { 
+                            assembly = Assembly.LoadFrom(Path.Combine(assemblyName));
+                        }
+                    }
+                }
+                if (assembly != null)
+                {
+                    type = (Type)assembly.GetType(typeName);
+                }
+            }
+            else
+            {
+                type = Type.GetType(typeName);
+            }
             return type;
         }
 
