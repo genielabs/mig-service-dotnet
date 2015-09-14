@@ -415,18 +415,18 @@ namespace MIG
         /// <param name="description">Description.</param>
         /// <param name="propertyPath">Property path.</param>
         /// <param name="propertyValue">Property value.</param>
-        public void RaiseEvent(string domain, string source, string description, string propertyPath, object propertyValue)
+        public void RaiseEvent(object sender, string domain, string source, string description, string propertyPath, object propertyValue)
         {
-            RaiseEvent(GetEvent(domain, source, description, propertyPath, propertyValue));
+            RaiseEvent(sender, GetEvent(domain, source, description, propertyPath, propertyValue));
         }
 
         /// <summary>
         /// Raises the event.
         /// </summary>
         /// <param name="evt">Evt.</param>
-        public void RaiseEvent(MigEvent evt)
+        public void RaiseEvent(object sender, MigEvent evt)
         {
-            OnInterfacePropertyChanged(new InterfacePropertyChangedEventArgs(evt));
+            OnInterfacePropertyChanged(sender, new InterfacePropertyChangedEventArgs(evt));
         }
 
         /// <summary>
@@ -571,14 +571,14 @@ namespace MIG
         {
             // event propagation
             // TODO: should preserve the original "sender" ?
-            OnInterfacePropertyChanged(args);
+            OnInterfacePropertyChanged(sender, args);
         }
 
         private void MigService_InterfaceModulesChanged(object sender, InterfaceModulesChangedEventArgs args)
         {
             // event propagation
             // TODO: should preserve the original "sender" ?
-            OnInterfaceModulesChanged(args);
+            OnInterfaceModulesChanged(sender, args);
         }
 
         #endregion
@@ -589,7 +589,7 @@ namespace MIG
         {
             var request = args.Request;
             // Route event
-            OnPreProcessRequest(request);
+            OnPreProcessRequest(sender, request);
 
             if (request.Handled)
                 return;
@@ -615,7 +615,7 @@ namespace MIG
                         else
                             request.ResponseData = new ResponseStatus(Status.Error, String.Format("Interface {0} not found", command.Address));
                     }
-                    OnInterfacePropertyChanged(new InterfacePropertyChangedEventArgs("MIGService.Interfaces", command.Address, "MIG Interface", "Status.IsEnabled", command.GetOption(0)));
+                    OnInterfacePropertyChanged(sender, new InterfacePropertyChangedEventArgs("MIGService.Interfaces", command.Address, "MIG Interface", "Status.IsEnabled", command.GetOption(0)));
                     break;
                 case "IsEnabled.Get":
                     request.ResponseData = new ResponseText(configuration.GetInterface(command.Address).IsEnabled ? "1" : "0");
@@ -633,7 +633,7 @@ namespace MIG
                             request.ResponseData = new ResponseStatus(Status.Error, String.Format("Interface {0} not found", command.Address));
                         }
                     }
-                    OnInterfacePropertyChanged(new InterfacePropertyChangedEventArgs("MIGService.Interfaces", command.Address, "MIG Interface", "Options." + command.GetOption(0), command.GetOption(1)));
+                    OnInterfacePropertyChanged(sender, new InterfacePropertyChangedEventArgs("MIGService.Interfaces", command.Address, "MIG Interface", "Options." + command.GetOption(0), command.GetOption(1)));
                     break;
                 case "Options.Get":
                     {
@@ -693,44 +693,44 @@ namespace MIG
         {
             var request = args.Request;
             // Route event
-            OnPostProcessRequest(request);
+            OnPostProcessRequest(sender, request);
         }
 
         #endregion
 
         #region MigService Events
 
-        protected virtual void OnPreProcessRequest(MigClientRequest request)
+        protected virtual void OnPreProcessRequest(object sender, MigClientRequest request)
         {
             if (GatewayRequestPreProcess != null)
-                GatewayRequestPreProcess(this, new ProcessRequestEventArgs(request));
+                GatewayRequestPreProcess(sender, new ProcessRequestEventArgs(request));
         }
 
-        protected virtual void OnPostProcessRequest(MigClientRequest request)
+        protected virtual void OnPostProcessRequest(object sender, MigClientRequest request)
         {
             if (GatewayRequestPostProcess != null)
-                GatewayRequestPostProcess(this, new ProcessRequestEventArgs(request));
+                GatewayRequestPostProcess(sender, new ProcessRequestEventArgs(request));
         }
 
-        protected virtual void OnInterfaceModulesChanged(InterfaceModulesChangedEventArgs args)
+        protected virtual void OnInterfaceModulesChanged(object sender, InterfaceModulesChangedEventArgs args)
         {
             Log.Info(args.Domain);
             if (InterfaceModulesChanged != null)
             {
-                InterfaceModulesChanged(this, args);
+                InterfaceModulesChanged(sender, args);
             }
         }
 
-        protected virtual void OnInterfacePropertyChanged(InterfacePropertyChangedEventArgs args)
+        protected virtual void OnInterfacePropertyChanged(object sender, InterfacePropertyChangedEventArgs args)
         {
             Log.Info(args.EventData);
             if (InterfacePropertyChanged != null)
             {
-                InterfacePropertyChanged(this, args);
+                InterfacePropertyChanged(sender, args);
             }
             // Route event to MIG.Gateways as well
             foreach (var gateway in Gateways)
-                gateway.OnInterfacePropertyChanged(this, args);
+                gateway.OnInterfacePropertyChanged(sender, args);
         }
 
         #endregion

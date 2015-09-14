@@ -59,14 +59,14 @@ namespace Tests.WebService
                 {
                 case "greet":
                     var name = cmd.GetOption(0);
-                    migService.RaiseEvent(cmd.Domain, cmd.Address, "Reply to Greet", "Greet.User", name);
+                    migService.RaiseEvent(typeof(MainClass), cmd.Domain, cmd.Address, "Reply to Greet", "Greet.User", name);
                     break;
                 case "echo":
                     string fullRequestPath = cmd.OriginalRequest;
-                    migService.RaiseEvent(cmd.Domain, cmd.Address, "Reply to Echo", "Echo.Data", fullRequestPath);
+                    migService.RaiseEvent(typeof(MainClass), cmd.Domain, cmd.Address, "Reply to Echo", "Echo.Data", fullRequestPath);
                     break;
                 case "ping":
-                    migService.RaiseEvent(cmd.Domain, cmd.Address, "Reply to Ping", "Ping.Reply", "PONG");
+                    migService.RaiseEvent(typeof(MainClass), cmd.Domain, cmd.Address, "Reply to Ping", "Ping.Reply", "PONG");
                     break;
                 }
 
