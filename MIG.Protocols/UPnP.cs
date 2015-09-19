@@ -485,6 +485,20 @@ namespace MIG.Interfaces.Protocols
                     InvokeUpnpDeviceService(device, "AVTransport", "Next", args);
                 }
                 break;
+            case Commands.AvMedia_GetMute:
+                {
+                    var instanceId = new UPnPArgument("InstanceID", (uint)0);
+                    var channel = new UPnPArgument("Channel", "Master");
+                    var currentMute = new UPnPArgument("CurrentMute", "");
+                    var args = new UPnPArgument[] { 
+                        instanceId,
+                        channel,
+                        currentMute
+                    };
+                    InvokeUpnpDeviceService(device, "RenderingControl", "GetMute", args);
+                    returnValue = currentMute.DataValue.ToString();
+                }
+                break;
             case Commands.AvMedia_SetMute:
                 {
                     var instanceId = new UPnPArgument("InstanceID", (uint)0);
