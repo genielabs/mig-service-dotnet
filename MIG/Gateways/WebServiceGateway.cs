@@ -290,10 +290,13 @@ namespace MIG.Gateways
                                 InterfacePropertyChangedEventHandler changedDelegate = (object sender, InterfacePropertyChangedEventArgs args) => {
                                     try
                                     {
-                                        // TODO: event data should not contains \n character, so these should be stripped or escaped
-                                        byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + args.EventData.Timestamp.Ticks + "\ndata: " + MigService.JsonSerialize(args.EventData) + "\n\n");
-                                        response.OutputStream.Write(data, 0, data.Length);
-                                        response.OutputStream.Flush();
+                                        lock (response)
+                                        {
+                                            // TODO: event data should not contains \n character, so these should be stripped or escaped
+                                            byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + args.EventData.Timestamp.Ticks + "\ndata: " + MigService.JsonSerialize(args.EventData) + "\n\n");
+                                            response.OutputStream.Write(data, 0, data.Length);
+                                            response.OutputStream.Flush();
+                                        }
                                     }
                                     catch (Exception e)
                                     {
