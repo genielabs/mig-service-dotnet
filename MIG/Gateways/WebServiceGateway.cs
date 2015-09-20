@@ -74,7 +74,6 @@ namespace MIG.Gateways
         public event PostProcessRequestEventHandler PostProcessRequest;
         private event InterfacePropertyChangedEventHandler PropertyChanged;
 
-        private readonly object eventLock = new object();
         private ManualResetEvent stopEvent = new ManualResetEvent(false);
 
         // Web Service configuration fields
@@ -133,8 +132,15 @@ namespace MIG.Gateways
         public void OnInterfacePropertyChanged(object sender, InterfacePropertyChangedEventArgs args)
         {
             if (PropertyChanged != null)
-                lock (eventLock)
+            {
+                new Thread(() =>
+                {
                     PropertyChanged(this, args);
+                }).Start();
+                //ThreadPool.QueueUserWorkItem(new WaitCallback((state) => {
+                //    PropertyChanged(this, args);
+                //}));
+            }
         }
 
         public bool Start()
