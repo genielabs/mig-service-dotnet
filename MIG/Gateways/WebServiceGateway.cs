@@ -30,6 +30,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Security.Cryptography.X509Certificates;
+using System.Web;
 
 using Ude;
 using Ude.Core;
@@ -37,6 +38,7 @@ using Ude.Core;
 using CommonMark;
 
 using MIG.Config;
+using System.Diagnostics;
 
 namespace MIG.Gateways
 {
@@ -72,7 +74,7 @@ namespace MIG.Gateways
     {
         public event PreProcessRequestEventHandler PreProcessRequest;
         public event PostProcessRequestEventHandler PostProcessRequest;
-        private event InterfacePropertyChangedEventHandler PropertyChanged;
+        //private event InterfacePropertyChangedEventHandler PropertyChanged;
 
         private ManualResetEvent stopEvent = new ManualResetEvent(false);
 
@@ -91,8 +93,13 @@ namespace MIG.Gateways
         private List<string> httpCacheIgnoreList = new List<string>();
         private List<string> urlAliases = new List<string>();
 
+        private const int sseEventBufferSize = 100;
+        private List<MigEvent> sseEventBuffer;
+        private object sseEventToken = new object();
+
         public WebServiceGateway()
         {
+            sseEventBuffer = new List<MigEvent>();
         }
 
         public List<Option> Options { get; set; }
@@ -131,16 +138,15 @@ namespace MIG.Gateways
 
         public void OnInterfacePropertyChanged(object sender, InterfacePropertyChangedEventArgs args)
         {
-            if (PropertyChanged != null)
+            if (sseEventBuffer.Count > sseEventBufferSize)
             {
-                new Thread(() =>
-                {
-                    PropertyChanged(this, args);
-                }).Start();
-                //ThreadPool.QueueUserWorkItem(new WaitCallback((state) => {
-                //    PropertyChanged(this, args);
-                //}));
+                sseEventBuffer.RemoveRange(0, sseEventBuffer.Count - sseEventBufferSize);
             }
+            sseEventBuffer.Add(args.EventData);
+            // dirty work around for signaling new event and 
+            // avoiding locks on long socket timetout
+            lock (sseEventToken)
+                Monitor.PulseAll(sseEventToken);
         }
 
         public bool Start()
@@ -216,6 +222,7 @@ namespace MIG.Gateways
                 //
                 bool isAuthenticated = (request.Headers["Authorization"] != null);
                 string remoteAddress = request.RemoteEndPoint.Address.ToString();
+                string logExtras = "";
                 //
                 if (servicePassword == "" || isAuthenticated) //request.IsAuthenticated)
                 {
@@ -269,8 +276,9 @@ namespace MIG.Gateways
                             // this url is reserved for Server Sent Event stream
                             if (url.TrimEnd('/').Equals("events"))
                             {
+                                // TODO: move all of this to a separate function
                                 // Server sent events
-                                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1}", response.StatusCode, request.RawUrl)));
+                                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1} [OPEN]", response.StatusCode, request.RawUrl)));
                                 // NOTE: no PreProcess or PostProcess events are fired in this case
                                 //response.KeepAlive = true;
                                 response.ContentEncoding = Encoding.UTF8;
@@ -284,35 +292,64 @@ namespace MIG.Gateways
                                 response.OutputStream.Write(paddingData, 0, paddingData.Length);
                                 byte[] retryData = System.Text.Encoding.UTF8.GetBytes("retry: 1000\n");
                                 response.OutputStream.Write(retryData, 0, retryData.Length);
-                                response.OutputStream.Flush();
+
+                                double lastTimeStamp = 0;
+                                var lastId = context.Request.Headers.Get("Last-Event-ID");
+                                if (lastId == null || lastId == "")
+                                {
+                                    var queryValues = HttpUtility.ParseQueryString(context.Request.Url.Query);
+                                    lastId = queryValues.Get("lastEventId");
+
+                                }
+
+                                if (lastId != null && lastId != "")
+                                {
+                                    double.TryParse(lastId, NumberStyles.Float | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out lastTimeStamp);
+                                }
+
+                                if (lastTimeStamp == 0)
+                                {
+                                    lastTimeStamp = (DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds;
+                                }
 
                                 bool connected = true;
-                                InterfacePropertyChangedEventHandler changedDelegate = (object sender, InterfacePropertyChangedEventArgs args) => {
-                                    try
-                                    {
-                                        lock (response)
-                                        {
-                                            // TODO: event data should not contains \n character, so these should be stripped or escaped
-                                            byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + args.EventData.Timestamp.Ticks + "\ndata: " + MigService.JsonSerialize(args.EventData) + "\n\n");
-                                            response.OutputStream.Write(data, 0, data.Length);
-                                            response.OutputStream.Flush();
-                                        }
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        // Client disconnected
-                                        //MigService.Log.Error(e);
-                                        connected = false;
-                                    }
-                                };
-                                this.PropertyChanged += changedDelegate;
+                                var connectionWatch = Stopwatch.StartNew();
                                 while (connected)
                                 {
-                                    Thread.Sleep(1000);
+                                    // dirty work around for signaling new event and 
+                                    // avoiding locks on long socket timetout
+                                    lock (sseEventToken)
+                                        Monitor.Wait(sseEventToken, 1000);
+                                    // safely dequeue events
+                                    List<MigEvent> bufferedData;
+                                    do
+                                    {
+                                        bufferedData = sseEventBuffer.FindAll(le => le != null && le.UnixTimestamp > lastTimeStamp);
+                                        if (bufferedData.Count > 0)
+                                        {
+                                            foreach (MigEvent entry in bufferedData)
+                                            {
+                                                // send events
+                                                try
+                                                {
+                                                    byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + entry.UnixTimestamp.ToString("R", CultureInfo.InvariantCulture) + "\ndata: " + MigService.JsonSerialize(entry) + "\n\n");
+                                                    context.Response.OutputStream.Write(data, 0, data.Length);
+                                                    lastTimeStamp = entry.UnixTimestamp;
+                                                }
+                                                catch (Exception e) 
+                                                {
+                                                    MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1} [ERROR: {2}]", response.StatusCode, request.RawUrl, e.Message)));
+                                                    connected = false;
+                                                    break;
+                                                }
+                                            }
+                                            Thread.Sleep(100);
+                                        }
+                                        // there might be new data after sending
+                                    } while (connected && bufferedData.Count > 0);
                                 }
-                                this.PropertyChanged -= changedDelegate;
-
-                                return;
+                                connectionWatch.Stop();
+                                logExtras = " [CLOSED AFTER " + Math.Round(connectionWatch.Elapsed.TotalMinutes, 3) + " min.]";
                             }
                             else
                             {
@@ -546,7 +583,7 @@ namespace MIG.Gateways
                     response.StatusCode = (int)HttpStatusCode.Unauthorized;
                     response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                 }
-                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1}", response.StatusCode, request.RawUrl)));
+                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1}{2}", response.StatusCode, request.RawUrl, logExtras)));
             }
             catch (Exception ex)
             {
