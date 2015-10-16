@@ -111,7 +111,6 @@ namespace MIG.Interfaces.Media
 
         public void OnSetOption(Option option)
         {
-            // TODO: check if this is working
             if (IsEnabled)
                 Connect();
         }

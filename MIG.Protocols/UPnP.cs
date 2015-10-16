@@ -113,7 +113,6 @@ namespace MIG.Interfaces.Protocols
 
         public void OnSetOption(Option option)
         {
-            // TODO: check if this is working
             if (IsEnabled)
                 Connect();
         }

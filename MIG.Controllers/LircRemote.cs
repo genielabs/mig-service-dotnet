@@ -108,7 +108,6 @@ namespace MIG.Interfaces.Controllers
 
         public void OnSetOption(Option option)
         {
-            // TODO: check if this is working
             if (IsEnabled)
                 Connect();
         }

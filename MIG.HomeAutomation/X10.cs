@@ -95,7 +95,6 @@ namespace MIG.Interfaces.HomeAutomation
 
         public void OnSetOption(Option option)
         {
-            // TODO: check if this is working
             if (IsEnabled)
                 Connect();
         }

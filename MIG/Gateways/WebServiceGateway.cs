@@ -283,7 +283,8 @@ namespace MIG.Gateways
                                 //response.KeepAlive = true;
                                 response.ContentEncoding = Encoding.UTF8;
                                 response.ContentType = "text/event-stream";
-                                response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache");
+                                response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache, no-store, must-revalidate");
+                                response.Headers.Set(HttpResponseHeader.Pragma, "no-cache");
                                 response.Headers.Set("Access-Control-Allow-Origin", "*");
 
                                 // 2K padding for IE
@@ -430,6 +431,8 @@ namespace MIG.Gateways
                                             }
 
                                             var file = new System.IO.FileInfo(requestedFile);
+                                            response.ContentLength64 = file.Length;
+
                                             bool modified = true;
                                             if (request.Headers.AllKeys.Contains("If-Modified-Since"))
                                             {
@@ -575,13 +578,19 @@ namespace MIG.Gateways
                     else
                     {
                         response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                        response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
+                        // this will only work in Linux (mono)
+                        //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
+                        // this works both on Linux and Windows
+                        response.AddHeader("WWW-Authenticate", "Basic");
                     }
                 }
                 else
                 {
                     response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                    response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
+                    // this will only work in Linux (mono)
+                    //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
+                    // this works both on Linux and Windows
+                    response.AddHeader("WWW-Authenticate", "Basic");
                 }
                 MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1}{2}", response.StatusCode, request.RawUrl, logExtras)));
             }
