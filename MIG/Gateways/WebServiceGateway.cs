@@ -39,6 +39,8 @@ using CommonMark;
 
 using MIG.Config;
 using System.Diagnostics;
+using System.Net.Sockets;
+using System.Net.NetworkInformation;
 
 namespace MIG.Gateways
 {
@@ -334,7 +336,10 @@ namespace MIG.Gateways
                                                 try
                                                 {
                                                     byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + entry.UnixTimestamp.ToString("R", CultureInfo.InvariantCulture) + "\ndata: " + MigService.JsonSerialize(entry) + "\n\n");
-                                                    context.Response.OutputStream.Write(data, 0, data.Length);
+                                                    response.OutputStream.Write(data, 0, data.Length);
+                                                    if (!response.OutputStream.FlushAsync().Wait(10000)) {
+                                                        connected = false;
+                                                    }
                                                     lastTimeStamp = entry.UnixTimestamp;
                                                 }
                                                 catch (Exception e) 
@@ -348,6 +353,8 @@ namespace MIG.Gateways
                                         }
                                         // there might be new data after sending
                                     } while (connected && bufferedData.Count > 0);
+                                    // check if the remote end point is still alive
+                                    connected = connected && IsRemoteEndPointConnected(request.RemoteEndPoint);
                                 }
                                 connectionWatch.Stop();
                                 logExtras = " [CLOSED AFTER " + Math.Round(connectionWatch.Elapsed.TotalMinutes, 3) + " min.]";
@@ -598,23 +605,23 @@ namespace MIG.Gateways
             {
                 MigService.Log.Error(ex);
             }
-            //
-            try
+            finally
             {
-                response.OutputStream.Close();
-                response.Close();
-            }
-            catch
-            {
-                // TODO: add logging
-            }
-            try
-            {
-                request.InputStream.Close();
-            }
-            catch
-            {
-                // TODO: add logging
+                //
+                // CleanUp/Dispose allocated resources
+                //
+                try { request.InputStream.Close(); } catch {
+                    // TODO: add logging
+                }
+                try { response.OutputStream.Close(); } catch {
+                    // TODO: add logging
+                }
+                try { response.Close(); } catch {
+                    // TODO: add logging
+                }
+                try { response.Abort(); } catch {
+                    // TODO: add logging
+                }
             }
         }
 
@@ -710,6 +717,22 @@ namespace MIG.Gateways
             if (context == null)
                 return;
             Worker(context);
+        }
+
+        private bool IsRemoteEndPointConnected(IPEndPoint ep)
+        {
+            bool isConnected = false;
+            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
+            TcpConnectionInformation[] connections = properties.GetActiveTcpConnections(); 
+            foreach (TcpConnectionInformation c in connections)
+            {
+                if (c.RemoteEndPoint.ToString() == ep.ToString())
+                {
+                    isConnected = !(c.State == TcpState.CloseWait);
+                    break;
+                }
+            }
+            return isConnected;
         }
 
         #endregion
