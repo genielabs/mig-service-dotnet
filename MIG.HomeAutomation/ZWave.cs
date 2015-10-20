@@ -53,6 +53,7 @@ namespace MIG.Interfaces.HomeAutomation
             Controller_SoftReset,
             Controller_HardReset,
             Controller_NodeNeighborUpdate,
+            Controller_NodeRoutingInfo,
 
             Basic_Get,
             Basic_Set,
@@ -99,6 +100,9 @@ namespace MIG.Interfaces.HomeAutomation
 
             UserCode_Set,
 
+            Version_Get,
+            Version_GetAll,
+
             DoorLock_Set,
             DoorLock_Get
         }
@@ -128,11 +132,6 @@ namespace MIG.Interfaces.HomeAutomation
         #region Private fields
 
         private ZWaveController controller;
-
-        private ManualResetEvent responseAck = new ManualResetEvent(false);
-        private string waitEventPath = "";
-        private object waitEventValue = null;
-        private object eventLock = new object();
 
         private byte lastRemovedNode = 0;
         private byte lastAddedNode = 0;
@@ -250,338 +249,360 @@ namespace MIG.Interfaces.HomeAutomation
             {
                 if (nodeNumber > 0)
                     node = controller.GetNode(nodeNumber);
-                lock (eventLock)
+                switch (command)
                 {
-                    switch (command)
+
+                case Commands.Controller_Discovery:
+                    controller.Discovery();
+                    break;
+
+                case Commands.Controller_SoftReset:
+                    controller.SoftReset();
+                    break;
+
+                case Commands.Controller_HardReset:
+                    controller.HardReset();
+                    controller.Discovery();
+                    break;
+
+                case Commands.Controller_NodeNeighborUpdate:
+                    controller.RequestNeighborsUpdateOptions(nodeNumber);
+                    controller.RequestNeighborsUpdate(nodeNumber);
+                    controller.GetNeighborsRoutingInfo(nodeNumber);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_RoutingInfo);
+                    break;
+
+                case Commands.Controller_NodeRoutingInfo:
+                    controller.GetNeighborsRoutingInfo(nodeNumber);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_RoutingInfo);
+                    break;
+
+                case Commands.Controller_NodeAdd:
+                    lastAddedNode = 0;
+                    controller.BeginNodeAdd();
+                    for (int i = 0; i < 20; i++)
                     {
-
-                    case Commands.Controller_Discovery:
-                        controller.Discovery();
-                        break;
-
-                    case Commands.Controller_SoftReset:
-                        controller.SoftReset();
-                        break;
-
-                    case Commands.Controller_HardReset:
-                        controller.HardReset();
-                        controller.Discovery();
-                        break;
-
-                    case Commands.Controller_NodeNeighborUpdate:
-                        SetResponseEvent(EventPath_RoutingInfo);
-                        controller.RequestNeighborsUpdateOptions(nodeNumber);
-                        controller.RequestNeighborsUpdate(nodeNumber);
-                        controller.GetNeighborsRoutingInfo(nodeNumber);
-                        returnValue = GetResponseValue();
-                        break;
-
-                    case Commands.Controller_NodeAdd:
-                        lastAddedNode = 0;
-                        controller.BeginNodeAdd();
-                        for (int i = 0; i < 20; i++)
+                        if (lastAddedNode > 0)
                         {
-                            if (lastAddedNode > 0)
-                            {
-                                break;
-                            }
-                            Thread.Sleep(500);
+                            break;
                         }
-                        controller.StopNodeAdd();
-                        returnValue = lastAddedNode.ToString();
-                        break;
+                        Thread.Sleep(500);
+                    }
+                    controller.StopNodeAdd();
+                    returnValue = lastAddedNode.ToString();
+                    break;
 
-                    case Commands.Controller_NodeRemove:
-                        lastRemovedNode = 0;
-                        controller.BeginNodeRemove();
-                        for (int i = 0; i < 20; i++)
+                case Commands.Controller_NodeRemove:
+                    lastRemovedNode = 0;
+                    controller.BeginNodeRemove();
+                    for (int i = 0; i < 20; i++)
+                    {
+                        if (lastRemovedNode > 0)
                         {
-                            if (lastRemovedNode > 0)
-                            {
-                                break;
-                            }
-                            Thread.Sleep(500);
+                            break;
                         }
-                        controller.StopNodeRemove();
-                        returnValue = lastRemovedNode.ToString();
-                        break;
+                        Thread.Sleep(500);
+                    }
+                    controller.StopNodeRemove();
+                    returnValue = lastRemovedNode.ToString();
+                    break;
 
-                    case Commands.Basic_Set:
-                        {
-                            raiseEvent = true;
-                            var level = int.Parse(request.GetOption(0));
-                            eventValue = level.ToString(CultureInfo.InvariantCulture);
-                            Basic.Set(node, (byte)level);
-                        }
-                        break;
+                case Commands.Basic_Set:
+                    {
+                        raiseEvent = true;
+                        var level = int.Parse(request.GetOption(0));
+                        eventValue = level.ToString(CultureInfo.InvariantCulture);
+                        Basic.Set(node, (byte)level);
+                    }
+                    break;
 
-                    case Commands.Basic_Get:
-                        Basic.Get(node);
-                        returnValue = GetResponseValue(EventPath_Basic);
-                        break;
+                case Commands.Basic_Get:
+                    Basic.Get(node);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_Basic);
+                    break;
 
-                    case Commands.MultiInstance_GetCount:
+                case Commands.MultiInstance_GetCount:
+                    switch (request.GetOption(0))
+                    {
+                    case "Switch.Binary":
+                        MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SwitchBinary);
+                        break;
+                    case "Switch.MultiLevel":
+                        MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SwitchMultilevel);
+                        break;
+                    case "Sensor.Binary":
+                        MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SensorBinary);
+                        break;
+                    case "Sensor.MultiLevel":
+                        MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SensorMultilevel);
+                        break;
+                    }
+                    returnValue = GetResponseValue(nodeNumber, EventPath_MultiInstance + "." + request.GetOption(0) + ".Count");
+                    break;
+
+                case Commands.MultiInstance_Get:
+                    {
+                        byte instance = (byte)int.Parse(request.GetOption(1));
                         switch (request.GetOption(0))
                         {
                         case "Switch.Binary":
-                            MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SwitchBinary);
+                            MultiInstance.SwitchBinaryGet(node, instance);
                             break;
                         case "Switch.MultiLevel":
-                            MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SwitchMultilevel);
+                            MultiInstance.SwitchMultiLevelGet(node, instance);
                             break;
                         case "Sensor.Binary":
-                            MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SensorBinary);
+                            MultiInstance.SensorBinaryGet(node, instance);
                             break;
                         case "Sensor.MultiLevel":
-                            MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SensorMultilevel);
+                            MultiInstance.SensorMultiLevelGet(node, instance);
                             break;
                         }
-                        returnValue = GetResponseValue(EventPath_MultiInstance + "." + request.GetOption(0) + ".Count");
-                        break;
+                        returnValue = GetResponseValue(nodeNumber, EventPath_MultiInstance + "." + request.GetOption(0) + "." + instance);
+                    }
+                    break;
 
-                    case Commands.MultiInstance_Get:
+                case Commands.MultiInstance_Set:
+                    {
+                        byte instance = (byte)int.Parse(request.GetOption(1));
+                        int value = int.Parse(request.GetOption(2));
+                        //
+                        //raisepropchanged = true;
+                        //parampath += "." + instance; // Status.Level.<instance>
+                        //
+                        switch (request.GetOption(0))
                         {
-                            byte instance = (byte)int.Parse(request.GetOption(1));
-                            switch (request.GetOption(0))
-                            {
-                            case "Switch.Binary":
-                                MultiInstance.SwitchBinaryGet(node, instance);
-                                break;
-                            case "Switch.MultiLevel":
-                                MultiInstance.SwitchMultiLevelGet(node, instance);
-                                break;
-                            case "Sensor.Binary":
-                                MultiInstance.SensorBinaryGet(node, instance);
-                                break;
-                            case "Sensor.MultiLevel":
-                                MultiInstance.SensorMultiLevelGet(node, instance);
-                                break;
-                            }
-                            returnValue = GetResponseValue(EventPath_MultiInstance + "." + request.GetOption(0) + "." + instance);
+                        case "Switch.Binary":
+                            MultiInstance.SwitchBinarySet(node, instance, value);
+                        //raiseparam = (double.Parse(request.GetOption(2)) / 255).ToString();
+                            break;
+                        case "Switch.MultiLevel":
+                            MultiInstance.SwitchMultiLevelSet(node, instance, value);
+                        //raiseparam = (double.Parse(request.GetOption(2)) / 100).ToString(); // TODO: should it be 99 ?
+                            break;
                         }
-                        break;
+                    }
+                    break;
 
-                    case Commands.MultiInstance_Set:
+                case Commands.SensorBinary_Get:
+                    SensorBinary.Get(node);
+                    break;
+
+                case Commands.SensorMultiLevel_Get:
+                    SensorMultilevel.Get(node);
+                    break;
+
+                case Commands.Meter_Get:
+                // see ZWaveLib Sensor.cs for EnergyMeterScale options
+                    int scaleType = 0;
+                    int.TryParse(request.GetOption(0), out scaleType);
+                    Meter.Get(node, (byte)(scaleType << 0x03));
+                    break;
+
+                case Commands.Meter_SupportedGet:
+                    Meter.GetSupported(node);
+                    break;
+
+                case Commands.Meter_Reset:
+                    Meter.Reset(node);
+                    break;
+
+                case Commands.NodeInfo_Get:
+                    controller.GetNodeInformationFrame(nodeNumber);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_NodeInfo);
+                    break;
+
+                case Commands.Battery_Get:
+                    Battery.Get(node);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_Battery);
+                    break;
+
+                case Commands.Association_Set:
+                    Association.Set(node, (byte)int.Parse(request.GetOption(0)), (byte)int.Parse(request.GetOption(1)));
+                    break;
+
+                case Commands.Association_Get:
+                    byte group = (byte)int.Parse(request.GetOption(0));
+                    Association.Get(node, group);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_Associations + "." + group);
+                    break;
+
+                case Commands.Association_Remove:
+                    Association.Remove(node, (byte)int.Parse(request.GetOption(0)), (byte)int.Parse(request.GetOption(1)));
+                    break;
+
+                case Commands.ManufacturerSpecific_Get:
+                    ManufacturerSpecific.Get(node);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_ManufacturerSpecific);
+                    break;
+
+                case Commands.Config_ParameterSet:
+                    Configuration.Set(node, (byte)int.Parse(request.GetOption(0)), int.Parse(request.GetOption(1)));
+                    break;
+
+                case Commands.Config_ParameterGet:
+                    byte position = (byte)int.Parse(request.GetOption(0));
+                    Configuration.Get(node, position);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_ConfigVariables + "." + position);
+                    break;
+
+                case Commands.WakeUp_Get:
+                    WakeUp.Get(node);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_WakeUpInterval);
+                    break;
+
+                case Commands.WakeUp_Set:
+                    WakeUp.Set(node, uint.Parse(request.GetOption(0)));
+                    break;
+
+                case Commands.Version_Get:
+                    returnValue = "[{ \"ResponseValue\" : \"ERROR\" }]";
+                    CommandClass cclass;
+                    Enum.TryParse<CommandClass>(request.GetOption(0), out cclass);
+                    if (cclass != CommandClass.NotSet)
+                    {
+                        var nodeCclass = node.GetCommandClass(cclass);
+                        if (nodeCclass != null && nodeCclass.Version != 0)
                         {
-                            byte instance = (byte)int.Parse(request.GetOption(1));
-                            int value = int.Parse(request.GetOption(2));
-                            //
-                            //raisepropchanged = true;
-                            //parampath += "." + instance; // Status.Level.<instance>
-                            //
-                            switch (request.GetOption(0))
-                            {
-                            case "Switch.Binary":
-                                MultiInstance.SwitchBinarySet(node, instance, value);
-                            //raiseparam = (double.Parse(request.GetOption(2)) / 255).ToString();
-                                break;
-                            case "Switch.MultiLevel":
-                                MultiInstance.SwitchMultiLevelSet(node, instance, value);
-                            //raiseparam = (double.Parse(request.GetOption(2)) / 100).ToString(); // TODO: should it be 99 ?
-                                break;
-                            }
-                        }
-                        break;
-
-                    case Commands.SensorBinary_Get:
-                        SensorBinary.Get(node);
-                        break;
-
-                    case Commands.SensorMultiLevel_Get:
-                        SensorMultilevel.Get(node);
-                        break;
-
-                    case Commands.Meter_Get:
-                    // see ZWaveLib Sensor.cs for EnergyMeterScale options
-                        int scaleType = 0;
-                        int.TryParse(request.GetOption(0), out scaleType);
-                        Meter.Get(node, (byte)(scaleType << 0x03));
-                        break;
-
-                    case Commands.Meter_SupportedGet:
-                        Meter.GetSupported(node);
-                        break;
-
-                    case Commands.Meter_Reset:
-                        Meter.Reset(node);
-                        break;
-
-                    case Commands.NodeInfo_Get:
-                        SetResponseEvent(EventPath_NodeInfo);
-                        controller.GetNodeInformationFrame(nodeNumber);
-                        returnValue = GetResponseValue();
-                        break;
-
-                    case Commands.Battery_Get:
-                        Battery.Get(node);
-                        returnValue = GetResponseValue(EventPath_Battery);
-                        break;
-
-                    case Commands.Association_Set:
-                        Association.Set(node, (byte)int.Parse(request.GetOption(0)), (byte)int.Parse(request.GetOption(1)));
-                        break;
-
-                    case Commands.Association_Get:
-                        byte group = (byte)int.Parse(request.GetOption(0));
-                        Association.Get(node, group);
-                        returnValue = GetResponseValue(EventPath_Associations + "." + group);
-                        break;
-
-                    case Commands.Association_Remove:
-                        Association.Remove(node, (byte)int.Parse(request.GetOption(0)), (byte)int.Parse(request.GetOption(1)));
-                        break;
-
-                    case Commands.ManufacturerSpecific_Get:
-                        SetResponseEvent(EventPath_ManufacturerSpecific);
-                        ManufacturerSpecific.Get(node);
-                        returnValue = GetResponseValue();
-                        break;
-
-                    case Commands.Config_ParameterSet:
-                        Configuration.Set(node, (byte)int.Parse(request.GetOption(0)), int.Parse(request.GetOption(1)));
-                        break;
-
-                    case Commands.Config_ParameterGet:
-                        byte position = (byte)int.Parse(request.GetOption(0));
-                        Configuration.Get(node, position);
-                        returnValue = GetResponseValue(EventPath_ConfigVariables + "." + position);
-                        break;
-
-                    case Commands.WakeUp_Get:
-                        WakeUp.Get(node);
-                        returnValue = GetResponseValue(EventPath_WakeUpInterval);
-                        break;
-
-                    case Commands.WakeUp_Set:
-                        WakeUp.Set(node, uint.Parse(request.GetOption(0)));
-                        break;
-
-                    case Commands.Control_On:
-                        raiseEvent = true;
-                        eventValue = "1";
-                        Basic.Set(node, 0xFF);
-                        SetNodeLevel(node, 0xFF);
-                        break;
-
-                    case Commands.Control_Off:
-                        raiseEvent = true;
-                        eventValue = "0";
-                        Basic.Set(node, 0x00);
-                        SetNodeLevel(node, 0x00);
-                        break;
-
-                    case Commands.Control_Level:
-                        {
-                            raiseEvent = true;
-                            var level = int.Parse(request.GetOption(0));
-                            eventValue = Math.Round(level / 100D, 2).ToString(CultureInfo.InvariantCulture);
-                            // the max value should be obtained from node parameters specifications,
-                            // here we assume that the commonly used interval is [0-99] for most multilevel switches
-                            if (level >= 100)
-                                level = 99;
-                            if (node.SupportCommandClass(CommandClass.SwitchMultilevel))
-                                SwitchMultilevel.Set(node, (byte)level);
-                            else
-                                Basic.Set(node, (byte)level);
-                            SetNodeLevel(node, (byte)level);
-                        }
-                        break;
-
-                    case Commands.Control_Toggle:
-                        raiseEvent = true;
-                        if (GetNodeLevel(node) == 0)
-                        {
-                            eventValue = "1";
-                            Basic.Set(node, 0xFF);
-                            SetNodeLevel(node, 0xFF);
+                            returnValue = "[{ \"ResponseValue\" : \""+ nodeCclass.Version + "\" }]";
                         }
                         else
                         {
-                            eventValue = "0";
-                            Basic.Set(node, 0x00);
-                            SetNodeLevel(node, 0x00);
+                            ZWaveLib.CommandClasses.Version.Get(node, cclass); 
+                            returnValue = GetResponseValue(nodeNumber, "ZWaveNode.Version." + cclass);
                         }
-                        break;
-
-                    case Commands.Thermostat_ModeGet:
-                        ThermostatMode.Get(node);
-                        break;
-
-                    case Commands.Thermostat_ModeSet:
-                        {
-                            ThermostatMode.Value mode = (ThermostatMode.Value)Enum.Parse(typeof(ThermostatMode.Value), request.GetOption(0));
-                            //
-                            raiseEvent = true;
-                            eventParameter = "Thermostat.Mode";
-                            eventValue = request.GetOption(0);
-                            //
-                            ThermostatMode.Set(node, mode);
-                        }
-                        break;
-
-                    case Commands.Thermostat_SetPointGet:
-                        {
-                            ThermostatSetPoint.Value mode = (ThermostatSetPoint.Value)Enum.Parse(typeof(ThermostatSetPoint.Value), request.GetOption(0));
-                            ThermostatSetPoint.Get(node, mode);
-                        }
-                        break;
-
-                    case Commands.Thermostat_SetPointSet:
-                        {
-                            ThermostatSetPoint.Value mode = (ThermostatSetPoint.Value)Enum.Parse(typeof(ThermostatSetPoint.Value), request.GetOption(0));
-                            double temperature = double.Parse(request.GetOption(1).Replace(',', '.'), CultureInfo.InvariantCulture);
-                            //
-                            raiseEvent = true;
-                            eventParameter = "Thermostat.SetPoint." + request.GetOption(0);
-                            eventValue = temperature.ToString(CultureInfo.InvariantCulture);
-                            //
-                            ThermostatSetPoint.Set(node, mode, temperature);
-                        }
-                        break;
-
-                    case Commands.Thermostat_FanModeGet:
-                        ThermostatFanMode.Get(node);
-                        break;
-
-                    case Commands.Thermostat_FanModeSet:
-                        {
-                            ThermostatFanMode.Value mode = (ThermostatFanMode.Value)Enum.Parse(typeof(ThermostatFanMode.Value), request.GetOption(0));
-                            //
-                            raiseEvent = true;
-                            eventParameter = "Thermostat.FanMode";
-                            eventValue = request.GetOption(0);
-                            //
-                            ThermostatFanMode.Set(node, mode);
-                        }
-                        break;
-
-                    case Commands.Thermostat_FanStateGet:
-                        ThermostatFanState.Get(node);
-                        break;
-
-                    case Commands.Thermostat_OperatingStateGet:
-                        ThermostatOperatingState.GetOperatingState(node);
-                        break;
-
-                    case Commands.UserCode_Set:
-                        byte userId = byte.Parse(request.GetOption(0));
-                        byte userIdStatus = byte.Parse(request.GetOption(1));
-                        byte[] tagCode = ZWaveLib.Utility.HexStringToByteArray(request.GetOption(2));
-                        UserCode.Set(node, new ZWaveLib.Values.UserCodeValue(userId, userIdStatus, tagCode));
-                        break;
-
-                    case Commands.DoorLock_Get:
-                        DoorLock.Get(node);
-                        returnValue = GetResponseValue(ModuleEvents.Status_DoorLock);
-                        break;
-
-                    case Commands.DoorLock_Set:
-                        {
-                            DoorLock.Value mode = (DoorLock.Value)Enum.Parse(typeof(DoorLock.Value), request.GetOption(0));
-                            DoorLock.Set(node, mode);
-                        }
-                        break;
                     }
+                    break;
+
+                case Commands.Version_GetAll:
+                    controller.GetNodeCcsVersion(node);
+                    break;
+
+                case Commands.Control_On:
+                    raiseEvent = true;
+                    eventValue = "1";
+                    Basic.Set(node, 0xFF);
+                    SetNodeLevel(node, 0xFF);
+                    break;
+
+                case Commands.Control_Off:
+                    raiseEvent = true;
+                    eventValue = "0";
+                    Basic.Set(node, 0x00);
+                    SetNodeLevel(node, 0x00);
+                    break;
+
+                case Commands.Control_Level:
+                    {
+                        raiseEvent = true;
+                        var level = int.Parse(request.GetOption(0));
+                        eventValue = Math.Round(level / 100D, 2).ToString(CultureInfo.InvariantCulture);
+                        // the max value should be obtained from node parameters specifications,
+                        // here we assume that the commonly used interval is [0-99] for most multilevel switches
+                        if (level >= 100)
+                            level = 99;
+                        if (node.SupportCommandClass(CommandClass.SwitchMultilevel))
+                            SwitchMultilevel.Set(node, (byte)level);
+                        else
+                            Basic.Set(node, (byte)level);
+                        SetNodeLevel(node, (byte)level);
+                    }
+                    break;
+
+                case Commands.Control_Toggle:
+                    raiseEvent = true;
+                    if (GetNodeLevel(node) == 0)
+                    {
+                        eventValue = "1";
+                        Basic.Set(node, 0xFF);
+                        SetNodeLevel(node, 0xFF);
+                    }
+                    else
+                    {
+                        eventValue = "0";
+                        Basic.Set(node, 0x00);
+                        SetNodeLevel(node, 0x00);
+                    }
+                    break;
+
+                case Commands.Thermostat_ModeGet:
+                    ThermostatMode.Get(node);
+                    break;
+
+                case Commands.Thermostat_ModeSet:
+                    {
+                        ThermostatMode.Value mode = (ThermostatMode.Value)Enum.Parse(typeof(ThermostatMode.Value), request.GetOption(0));
+                        //
+                        raiseEvent = true;
+                        eventParameter = "Thermostat.Mode";
+                        eventValue = request.GetOption(0);
+                        //
+                        ThermostatMode.Set(node, mode);
+                    }
+                    break;
+
+                case Commands.Thermostat_SetPointGet:
+                    {
+                        ThermostatSetPoint.Value mode = (ThermostatSetPoint.Value)Enum.Parse(typeof(ThermostatSetPoint.Value), request.GetOption(0));
+                        ThermostatSetPoint.Get(node, mode);
+                    }
+                    break;
+
+                case Commands.Thermostat_SetPointSet:
+                    {
+                        ThermostatSetPoint.Value mode = (ThermostatSetPoint.Value)Enum.Parse(typeof(ThermostatSetPoint.Value), request.GetOption(0));
+                        double temperature = double.Parse(request.GetOption(1).Replace(',', '.'), CultureInfo.InvariantCulture);
+                        //
+                        raiseEvent = true;
+                        eventParameter = "Thermostat.SetPoint." + request.GetOption(0);
+                        eventValue = temperature.ToString(CultureInfo.InvariantCulture);
+                        //
+                        ThermostatSetPoint.Set(node, mode, temperature);
+                    }
+                    break;
+
+                case Commands.Thermostat_FanModeGet:
+                    ThermostatFanMode.Get(node);
+                    break;
+
+                case Commands.Thermostat_FanModeSet:
+                    {
+                        ThermostatFanMode.Value mode = (ThermostatFanMode.Value)Enum.Parse(typeof(ThermostatFanMode.Value), request.GetOption(0));
+                        //
+                        raiseEvent = true;
+                        eventParameter = "Thermostat.FanMode";
+                        eventValue = request.GetOption(0);
+                        //
+                        ThermostatFanMode.Set(node, mode);
+                    }
+                    break;
+
+                case Commands.Thermostat_FanStateGet:
+                    ThermostatFanState.Get(node);
+                    break;
+
+                case Commands.Thermostat_OperatingStateGet:
+                    ThermostatOperatingState.GetOperatingState(node);
+                    break;
+
+                case Commands.UserCode_Set:
+                    byte userId = byte.Parse(request.GetOption(0));
+                    byte userIdStatus = byte.Parse(request.GetOption(1));
+                    byte[] tagCode = ZWaveLib.Utility.HexStringToByteArray(request.GetOption(2));
+                    UserCode.Set(node, new ZWaveLib.Values.UserCodeValue(userId, userIdStatus, tagCode));
+                    break;
+
+                case Commands.DoorLock_Get:
+                    DoorLock.Get(node);
+                    returnValue = GetResponseValue(nodeNumber, ModuleEvents.Status_DoorLock);
+                    break;
+
+                case Commands.DoorLock_Set:
+                    {
+                        DoorLock.Value mode = (DoorLock.Value)Enum.Parse(typeof(DoorLock.Value), request.GetOption(0));
+                        DoorLock.Set(node, mode);
+                    }
+                    break;
                 }
             }
 
@@ -689,7 +710,7 @@ namespace MIG.Interfaces.HomeAutomation
             case ControllerStatus.Initializing:
                 break;
             case ControllerStatus.Ready:
-                // Query all nodes (Basic Classes, Node Information Frame, Manufacturer Specific, Command Class version)
+                // Query all nodes (Basic Classes, Node Information Frame, Manufacturer Specific[, Command Class version])
                 controller.Discovery();
                 break;
             case ControllerStatus.Error:
@@ -876,6 +897,9 @@ namespace MIG.Interfaces.HomeAutomation
                 case EventParameter.WakeUpInterval:
                     eventPath = EventPath_WakeUpInterval;
                     break;
+                case EventParameter.WakeUpSleepingStatus:
+                    eventPath = "ZWaveNode.WakeUpSleepingStatus";
+                    break;
                 case EventParameter.WakeUpNotify:
                     eventPath = "ZWaveNode.WakeUpNotify";
                     break;
@@ -931,40 +955,37 @@ namespace MIG.Interfaces.HomeAutomation
                     break;
                 }
 
-                if (waitEventPath == eventPath)
-                {
-                    waitEventValue = eventValue;
-                    responseAck.Set();
-                }
-
                 OnInterfacePropertyChanged(this.GetDomain(), eventData.Node.Id.ToString(), "ZWave Node", eventPath, eventValue);
 
                 eventData = eventData.NestedEvent;
             }
         }
 
-        private void SetResponseEvent(string eventPath)
+        private string GetResponseValue(byte nodeNumber, string eventPath)
         {
-            waitEventPath = eventPath;
-            waitEventValue = null;
-        }
-
-        private string GetResponseValue(string eventPath = "")
-        {
-            string returnValue = "[{ \"ResponseValue\" : \"ERR_TIMEOUT\" }]";
-            if (!String.IsNullOrWhiteSpace(eventPath))
-                waitEventPath = eventPath;
-            if (waitEventValue == null)
+            string returnValue = "ERR_TIMEOUT";
+            InterfacePropertyChangedEventHandler eventHandler = new InterfacePropertyChangedEventHandler((sender, property) =>
             {
-                responseAck.Reset();
-                responseAck.WaitOne(ZWaveMessage.SendMessageTimeoutMs);
-            }
-            if (waitEventValue != null)
+                if (property.EventData.Source == nodeNumber.ToString() && property.EventData.Property == eventPath)
+                {
+                    returnValue = property.EventData.Value.ToString();
+                }
+            });
+            InterfacePropertyChanged += eventHandler;
+            Thread t = new Thread(() =>
             {
-                returnValue = "[{ \"ResponseValue\" : \"" + waitEventValue + "\" }]";
-            }
-            waitEventPath = "";
-            waitEventValue = null;
+                int timeout = 0;
+                int delay = 100;
+                while (returnValue == "ERR_TIMEOUT" && timeout < ZWaveMessage.SendMessageTimeoutMs / delay)
+                {
+                    Thread.Sleep(delay);
+                    timeout++;
+                }
+            });
+            t.Start();
+            t.Join(ZWaveMessage.SendMessageTimeoutMs);
+            InterfacePropertyChanged -= eventHandler;
+            returnValue = "[{ \"ResponseValue\" : \"" + returnValue + "\" }]";
             return returnValue;
         }
 
@@ -1001,7 +1022,10 @@ namespace MIG.Interfaces.HomeAutomation
             if (InterfacePropertyChanged != null)
             {
                 var args = new InterfacePropertyChangedEventArgs(domain, source, description, propertyPath, propertyValue);
-                InterfacePropertyChanged(this, args);
+                new Thread(() =>
+                {
+                    InterfacePropertyChanged(this, args);
+                }).Start();
             }
         }
 

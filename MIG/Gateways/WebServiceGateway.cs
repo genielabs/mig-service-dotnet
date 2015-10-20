@@ -317,6 +317,7 @@ namespace MIG.Gateways
 
                                 bool connected = true;
                                 var connectionWatch = Stopwatch.StartNew();
+                                var timeoutWatch =  Stopwatch.StartNew();
                                 while (connected)
                                 {
                                     // dirty work around for signaling new event and 
@@ -353,8 +354,13 @@ namespace MIG.Gateways
                                         }
                                         // there might be new data after sending
                                     } while (connected && bufferedData.Count > 0);
-                                    // check if the remote end point is still alive
-                                    connected = connected && IsRemoteEndPointConnected(request.RemoteEndPoint);
+                                    // check if the remote end point is still alive every 15 seconds or so
+                                    if (timeoutWatch.Elapsed.TotalSeconds > 15)
+                                    {
+                                        connected = connected && IsRemoteEndPointConnected(request.RemoteEndPoint);
+                                        timeoutWatch.Stop();
+                                        timeoutWatch = Stopwatch.StartNew();
+                                    }
                                 }
                                 connectionWatch.Stop();
                                 logExtras = " [CLOSED AFTER " + Math.Round(connectionWatch.Elapsed.TotalMinutes, 3) + " min.]";

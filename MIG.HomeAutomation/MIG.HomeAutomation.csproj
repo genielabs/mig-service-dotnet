@@ -43,9 +43,6 @@
     <Reference Include="SerialPortLib">
       <HintPath>..\packages\SerialPortLib.1.0.8\lib\SerialPortLib.dll</HintPath>
     </Reference>
-    <Reference Include="ZWaveLib">
-      <HintPath>..\packages\ZWaveLib.1.0.3\lib\ZWaveLib.dll</HintPath>
-    </Reference>
     <Reference Include="SoapBox.FluentDwelling">
       <HintPath>Externals\FluentDwelling\SoapBox.FluentDwelling.dll</HintPath>
     </Reference>
@@ -54,6 +51,9 @@
     </Reference>
     <Reference Include="XTenLib">
       <HintPath>..\packages\XTenLib.1.0.6\lib\XTenLib.dll</HintPath>
+    </Reference>
+    <Reference Include="ZWaveLib">
+      <HintPath>..\packages\ZWaveLib.1.0.5\lib\ZWaveLib.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
