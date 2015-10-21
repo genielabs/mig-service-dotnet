@@ -843,7 +843,7 @@ namespace MIG.Interfaces.Protocols
 
     #region UpnpSmartControlPoint helper class
 
-    // original code from
+    // adapted from:
     // https://code.google.com/p/phanfare-tools/
     // http://phanfare-tools.googlecode.com/svn/trunk/Phanfare.MediaServer/UPnP/Intel/UPNP/UPnPInternalSmartControlPoint.cs
 
@@ -887,7 +887,12 @@ namespace MIG.Interfaces.Protocols
             this.genericControlPoint.OnNotify -= this.SSDPNotifySink;
             this.deviceFactory.Shutdown();
             this.deviceFactory = null;
+            foreach (UPnPDevice dev in activeDeviceList) 
+            {
+                dev.Removed();
+            }
             this.hostNetworkInfo = null;
+            this.genericControlPoint.Dispose();
             this.genericControlPoint = null;
         }
 
@@ -994,11 +999,7 @@ namespace MIG.Interfaces.Protocols
             }
             if (info.Device != null)
             {
-                //info.Device.Removed();
-            }
-            if (info.Device != null)
-            {
-                //info.Device.Removed();
+                info.Device.Removed();
                 this.OnDeviceExpiredEvent.Fire(this, info.Device);
             }
         }
@@ -1053,8 +1054,8 @@ namespace MIG.Interfaces.Protocols
             }
             foreach (UPnPDevice device2 in list)
             {
-                //device2.Removed();
                 this.OnRemovedDeviceEvent.Fire(this, device2);
+                device2.Removed();
             }
             this.genericControlPoint.FindDeviceAsync(searchFilter);
         }
@@ -1077,7 +1078,7 @@ namespace MIG.Interfaces.Protocols
             }
             if (device2 != null)
             {
-                //device2.Removed();
+                device2.Removed();
             }
             if (device2 != null)
             {
@@ -1112,7 +1113,7 @@ namespace MIG.Interfaces.Protocols
                     }
                     if (device != null)
                     {
-                        //device.Removed();
+                        device.Removed();
                     }
                     if (device != null)
                     {
