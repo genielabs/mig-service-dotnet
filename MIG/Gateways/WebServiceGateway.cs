@@ -54,6 +54,21 @@ namespace MIG.Gateways
         public bool IsCached;
     }
 
+    class SseEvent
+    {
+        // Wrapper class for MigEvent
+        // used to provide a better resolution Timestamp
+        // and avoid events skipping
+        public MigEvent Event;
+        public DateTime Timestamp;
+
+        public SseEvent(MigEvent evt)
+        {
+            Event = evt;
+            Timestamp = DateTime.UtcNow;
+        }
+    }
+
     public class HttpListenerCallbackState
     {
         private readonly HttpListener listener;
@@ -96,12 +111,12 @@ namespace MIG.Gateways
         private List<string> urlAliases = new List<string>();
 
         private const int sseEventBufferSize = 100;
-        private List<MigEvent> sseEventBuffer;
+        private List<SseEvent> sseEventBuffer;
         private object sseEventToken = new object();
 
         public WebServiceGateway()
         {
-            sseEventBuffer = new List<MigEvent>();
+            sseEventBuffer = new List<SseEvent>();
         }
 
         public List<Option> Options { get; set; }
@@ -144,7 +159,7 @@ namespace MIG.Gateways
             {
                 sseEventBuffer.RemoveRange(0, sseEventBuffer.Count - sseEventBufferSize);
             }
-            sseEventBuffer.Add(args.EventData);
+            sseEventBuffer.Add(new SseEvent(args.EventData));
             // dirty work around for signaling new event and 
             // avoiding locks on long socket timetout
             lock (sseEventToken)
@@ -296,7 +311,7 @@ namespace MIG.Gateways
                                 byte[] retryData = System.Text.Encoding.UTF8.GetBytes("retry: 1000\n");
                                 response.OutputStream.Write(retryData, 0, retryData.Length);
 
-                                double lastTimeStamp = 0;
+                                DateTime lastTimeStamp = DateTime.UtcNow;
                                 var lastId = context.Request.Headers.Get("Last-Event-ID");
                                 if (lastId == null || lastId == "")
                                 {
@@ -307,12 +322,13 @@ namespace MIG.Gateways
 
                                 if (lastId != null && lastId != "")
                                 {
-                                    double.TryParse(lastId, NumberStyles.Float | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out lastTimeStamp);
-                                }
-
-                                if (lastTimeStamp == 0)
-                                {
-                                    lastTimeStamp = (DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds;
+                                    double unixTimestamp = 0;
+                                    double.TryParse(lastId, NumberStyles.Float | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out unixTimestamp);
+                                    if (unixTimestamp != 0)
+                                    {
+                                        lastTimeStamp = new DateTime(1970,1,1,0,0,0,0,System.DateTimeKind.Utc);
+                                        lastTimeStamp.AddSeconds(Math.Round(unixTimestamp / 1000d));
+                                    }
                                 }
 
                                 bool connected = true;
@@ -325,23 +341,23 @@ namespace MIG.Gateways
                                     lock (sseEventToken)
                                         Monitor.Wait(sseEventToken, 1000);
                                     // safely dequeue events
-                                    List<MigEvent> bufferedData;
+                                    List<SseEvent> bufferedData;
                                     do
                                     {
-                                        bufferedData = sseEventBuffer.FindAll(le => le != null && le.UnixTimestamp > lastTimeStamp);
+                                        bufferedData = sseEventBuffer.FindAll(le => le != null && le.Timestamp.Ticks > lastTimeStamp.Ticks);
                                         if (bufferedData.Count > 0)
                                         {
-                                            foreach (MigEvent entry in bufferedData)
+                                            foreach (SseEvent entry in bufferedData)
                                             {
                                                 // send events
                                                 try
                                                 {
-                                                    byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + entry.UnixTimestamp.ToString("R", CultureInfo.InvariantCulture) + "\ndata: " + MigService.JsonSerialize(entry) + "\n\n");
+                                                    byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + entry.Event.UnixTimestamp.ToString("R", CultureInfo.InvariantCulture) + "\ndata: " + MigService.JsonSerialize(entry.Event) + "\n\n");
                                                     response.OutputStream.Write(data, 0, data.Length);
                                                     if (!response.OutputStream.FlushAsync().Wait(10000)) {
                                                         connected = false;
                                                     }
-                                                    lastTimeStamp = entry.UnixTimestamp;
+                                                    lastTimeStamp = entry.Timestamp;
                                                 }
                                                 catch (Exception e) 
                                                 {
