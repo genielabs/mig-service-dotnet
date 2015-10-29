@@ -290,12 +290,13 @@ namespace MIG.Gateways
                         }
                         else
                         {
+                            var connectionWatch = Stopwatch.StartNew();
+                            MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1} [OPEN]", response.StatusCode, request.RawUrl)));
                             // this url is reserved for Server Sent Event stream
                             if (url.TrimEnd('/').Equals("events"))
                             {
                                 // TODO: move all of this to a separate function
                                 // Server sent events
-                                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1} [OPEN]", response.StatusCode, request.RawUrl)));
                                 // NOTE: no PreProcess or PostProcess events are fired in this case
                                 //response.KeepAlive = true;
                                 response.ContentEncoding = Encoding.UTF8;
@@ -332,7 +333,6 @@ namespace MIG.Gateways
                                 }
 
                                 bool connected = true;
-                                var connectionWatch = Stopwatch.StartNew();
                                 var timeoutWatch =  Stopwatch.StartNew();
                                 while (connected)
                                 {
@@ -378,8 +378,6 @@ namespace MIG.Gateways
                                         timeoutWatch = Stopwatch.StartNew();
                                     }
                                 }
-                                connectionWatch.Stop();
-                                logExtras = " [CLOSED AFTER " + Math.Round(connectionWatch.Elapsed.TotalMinutes, 3) + " min.]";
                             }
                             else
                             {
@@ -602,6 +600,8 @@ namespace MIG.Gateways
                                     Console.Error.WriteLine(eh);
                                 }
                             }
+                            connectionWatch.Stop();
+                            logExtras = " [CLOSED AFTER " + Math.Round(connectionWatch.Elapsed.TotalSeconds, 3) + " seconds]";
                         }
                     }
                     else

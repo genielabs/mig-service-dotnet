@@ -741,6 +741,9 @@ namespace MIG.Interfaces.HomeAutomation
             case NodeQueryStatus.Timeout:
                 OnInterfacePropertyChanged(this.GetDomain(), "1", "Z-Wave Controller", "Controller.Status", "Node " + args.NodeId + " response timeout!");
                 break;
+            case NodeQueryStatus.Error:
+                OnInterfacePropertyChanged(this.GetDomain(), args.NodeId.ToString(), "Z-Wave Node", "Status.Error", "Response timeout!");
+                break;
             default:
                 OnInterfacePropertyChanged(this.GetDomain(), "1", "Z-Wave Controller", "Controller.Status", String.Format("Node {0} Status {1}", args.NodeId, args.Status.ToString()));
                 break;

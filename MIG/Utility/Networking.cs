@@ -607,7 +607,15 @@ namespace MIG.Utility
         override protected void dataReceivedCallback(IAsyncResult asyn)
         {
             SocketPacket socketData = (SocketPacket)asyn.AsyncState;
-            int res = socketData.m_currentSocket.EndReceive(asyn);
+            int res = 0;
+            try
+            {
+                res = socketData.m_currentSocket.EndReceive(asyn);
+            }
+            catch (Exception e)
+            {
+                FireExceptionOccured(e);
+            }
             if (res <= 0)
             {
                 Stop();
@@ -994,7 +1002,15 @@ namespace MIG.Utility
         override protected void dataReceivedCallback(IAsyncResult asyn)
         {
             SocketPacket socketData = (SocketPacket)asyn.AsyncState;
-            int res = socketData.m_currentSocket.EndReceive(asyn);
+            int res = 0;
+            try
+            {
+                res = socketData.m_currentSocket.EndReceive(asyn);
+            }
+            catch (Exception e) 
+            {
+                FireExceptionOccured(e);
+            }
             if (res <= 0)
             {
                 DisconnectClient(socketData.m_currentSocket.GetHashCode());
@@ -1261,7 +1277,15 @@ namespace MIG.Utility
         override protected void dataReceivedCallback(IAsyncResult asyn)
         {
             SocketPacket socketData = (SocketPacket)asyn.AsyncState;
-            int res = socketData.m_currentSocket.EndReceive(asyn);
+            int res = 0;
+            try
+            {
+                res = socketData.m_currentSocket.EndReceive(asyn);
+            }
+            catch (Exception e) 
+            {
+                FireExceptionOccured(e);
+            }
             if (res <= 0)
             {
                 Stop();

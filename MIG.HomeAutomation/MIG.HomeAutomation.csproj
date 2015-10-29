@@ -40,20 +40,20 @@
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.4.1.0\lib\net45\NLog.dll</HintPath>
     </Reference>
-    <Reference Include="SerialPortLib">
-      <HintPath>..\packages\SerialPortLib.1.0.8\lib\SerialPortLib.dll</HintPath>
-    </Reference>
     <Reference Include="SoapBox.FluentDwelling">
       <HintPath>Externals\FluentDwelling\SoapBox.FluentDwelling.dll</HintPath>
     </Reference>
+    <Reference Include="SerialPortLib">
+      <HintPath>..\packages\SerialPortLib.1.0.10\lib\SerialPortLib.dll</HintPath>
+    </Reference>
     <Reference Include="W800Rf32Lib">
-      <HintPath>..\packages\W800Rf32Lib.1.0.4\lib\W800Rf32Lib.dll</HintPath>
+      <HintPath>..\packages\W800Rf32Lib.1.0.5\lib\W800Rf32Lib.dll</HintPath>
+    </Reference>
+    <Reference Include="ZWaveLib">
+      <HintPath>..\packages\ZWaveLib.1.0.7\lib\ZWaveLib.dll</HintPath>
     </Reference>
     <Reference Include="XTenLib">
       <HintPath>..\packages\XTenLib.1.0.6\lib\XTenLib.dll</HintPath>
-    </Reference>
-    <Reference Include="ZWaveLib">
-      <HintPath>..\packages\ZWaveLib.1.0.5\lib\ZWaveLib.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
