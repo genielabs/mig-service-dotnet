@@ -70,6 +70,7 @@ namespace MIG.Interfaces.Protocols
             Control_Toggle,
 
             AvMedia_Browse,
+            AvMedia_GetItem,
             AvMedia_GetUri,
             AvMedia_SetUri,
             AvMedia_GetTransportInfo,
@@ -220,6 +221,48 @@ namespace MIG.Interfaces.Protocols
             case Commands.Control_Toggle:
                 // TODO: not implemented yet
                 break;
+            case Commands.AvMedia_GetItem:
+                {
+                    string deviceId = request.Address;
+                    string id = request.GetOption(0);
+                    //
+                    var objectId = new UPnPArgument("ObjectID", id);
+                    var flags = new UPnPArgument("BrowseFlag", "BrowseMetadata");
+                    var filter = new UPnPArgument("Filter", "upnp:album,upnp:artist,upnp:genre,upnp:title,res@size,res@duration,res@bitrate,res@sampleFrequency,res@bitsPerSample,res@nrAudioChannels,res@protocolInfo,res@protection,res@importUri");
+                    var startIndex = new UPnPArgument("StartingIndex", (uint)0);
+                    var requestedCount = new UPnPArgument("RequestedCount", (uint)1);
+                    var sortCriteria = new UPnPArgument("SortCriteria", "");
+                    //
+                    var result = new UPnPArgument("Result", "");
+                    var returnedNumber = new UPnPArgument("NumberReturned", "");
+                    var totalMatches = new UPnPArgument("TotalMatches", "");
+                    var updateId = new UPnPArgument("UpdateID", "");
+                    //
+                    InvokeUpnpDeviceService(device, "ContentDirectory", "Browse", new UPnPArgument[] { 
+                        objectId,
+                        flags,
+                        filter,
+                        startIndex,
+                        requestedCount,
+                        sortCriteria,
+                        result,
+                        returnedNumber,
+                        totalMatches,
+                        updateId
+                    });
+                    //
+                    try
+                    {
+                        string ss = result.DataValue.ToString();
+                        var item = XDocument.Parse(ss, LoadOptions.SetBaseUri).Descendants().Where(ii => ii.Name.LocalName == "item").First();
+                        returnValue = MIG.Utility.Serialization.JsonSerialize(item, true);
+                    }
+                    catch
+                    {
+                        // TODO: MigService.Log.Error(e);
+                    }
+                }
+                break;
             case Commands.AvMedia_GetUri:
                 {
                     string deviceId = request.Address;
@@ -267,6 +310,7 @@ namespace MIG.Interfaces.Protocols
                     }
                     catch
                     {
+                        // TODO: MigService.Log.Error(e);
                     }
                 }
                 break;
@@ -319,6 +363,7 @@ namespace MIG.Interfaces.Protocols
                     }
                     catch
                     {
+                        // TODO: MigService.Log.Error(e);
                     }
                 }
                 break;
