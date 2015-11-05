@@ -354,9 +354,7 @@ namespace MIG.Gateways
                                                 {
                                                     byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + entry.Event.UnixTimestamp.ToString("R", CultureInfo.InvariantCulture) + "\ndata: " + MigService.JsonSerialize(entry.Event) + "\n\n");
                                                     response.OutputStream.Write(data, 0, data.Length);
-                                                    if (!response.OutputStream.FlushAsync().Wait(10000)) {
-                                                        connected = false;
-                                                    }
+                                                    //response.OutputStream.Flush();
                                                     lastTimeStamp = entry.Timestamp;
                                                 }
                                                 catch (Exception e) 

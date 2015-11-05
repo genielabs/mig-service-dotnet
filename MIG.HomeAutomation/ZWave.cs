@@ -322,43 +322,47 @@ namespace MIG.Interfaces.HomeAutomation
                     break;
 
                 case Commands.MultiInstance_GetCount:
-                    switch (request.GetOption(0))
                     {
-                    case "Switch.Binary":
-                        MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SwitchBinary);
-                        break;
-                    case "Switch.MultiLevel":
-                        MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SwitchMultilevel);
-                        break;
-                    case "Sensor.Binary":
-                        MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SensorBinary);
-                        break;
-                    case "Sensor.MultiLevel":
-                        MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SensorMultilevel);
-                        break;
+                        string commandType = request.GetOption(0).Replace(".", "");
+                        switch (commandType)
+                        {
+                        case "SwitchBinary":
+                            MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SwitchBinary);
+                            break;
+                        case "SwitchMultiLevel":
+                            MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SwitchMultilevel);
+                            break;
+                        case "SensorBinary":
+                            MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SensorBinary);
+                            break;
+                        case "SensorMultiLevel":
+                            MultiInstance.GetCount(node, (byte)ZWaveLib.CommandClass.SensorMultilevel);
+                            break;
+                        }
+                        returnValue = GetResponseValue(nodeNumber, EventPath_MultiInstance + "." + commandType + ".Count");
                     }
-                    returnValue = GetResponseValue(nodeNumber, EventPath_MultiInstance + "." + request.GetOption(0) + ".Count");
                     break;
 
                 case Commands.MultiInstance_Get:
                     {
                         byte instance = (byte)int.Parse(request.GetOption(1));
-                        switch (request.GetOption(0))
+                        string commandType = request.GetOption(0).Replace(".", "");
+                        switch (commandType)
                         {
-                        case "Switch.Binary":
+                        case "SwitchBinary":
                             MultiInstance.SwitchBinaryGet(node, instance);
                             break;
-                        case "Switch.MultiLevel":
+                        case "SwitchMultiLevel":
                             MultiInstance.SwitchMultiLevelGet(node, instance);
                             break;
-                        case "Sensor.Binary":
+                        case "SensorBinary":
                             MultiInstance.SensorBinaryGet(node, instance);
                             break;
-                        case "Sensor.MultiLevel":
+                        case "SensorMultiLevel":
                             MultiInstance.SensorMultiLevelGet(node, instance);
                             break;
                         }
-                        returnValue = GetResponseValue(nodeNumber, EventPath_MultiInstance + "." + request.GetOption(0) + "." + instance);
+                        returnValue = GetResponseValue(nodeNumber, EventPath_MultiInstance + "." + commandType + "." + instance);
                     }
                     break;
 
@@ -908,12 +912,20 @@ namespace MIG.Interfaces.HomeAutomation
                     break;
                 case EventParameter.Level:
                     eventPath = EventPath_Basic;
-                    // binary switches have [0/255], while multilevel switches [0-99],
-                    // normalize Status.Level to [0.0 <-> 1.0]
-                    double normalizedval = (Math.Round((double)eventValue / 100D, 2));
-                    if (normalizedval >= 0.99)
-                        normalizedval = 1.0;
-                    OnInterfacePropertyChanged(this.GetDomain(), eventData.Node.Id.ToString(), "ZWave Node", ModuleEvents.Status_Level + (eventData.Instance == 0 ? "" : "." + eventData.Instance), normalizedval.ToString(CultureInfo.InvariantCulture));
+                    if (eventData.Node.SupportCommandClass(CommandClass.SwitchBinary) || eventData.Node.SupportCommandClass(CommandClass.SwitchMultilevel))
+                    {
+                        // binary switches have [0/255], while multilevel switches [0-99],
+                        // normalize Status.Level to [0.0 <-> 1.0]
+                        double normalizedval = (Math.Round((double)eventValue / 100D, 2));
+                        if (normalizedval >= 0.99)
+                            normalizedval = 1.0;
+                        OnInterfacePropertyChanged(this.GetDomain(), eventData.Node.Id.ToString(), "ZWave Node", ModuleEvents.Status_Level + (eventData.Instance == 0 ? "" : "." + eventData.Instance), normalizedval.ToString(CultureInfo.InvariantCulture));
+                    }
+                    else
+                    {
+                        // if the node is not a Binary Switch or a Multilevel Switch, leave value as is
+                        OnInterfacePropertyChanged(this.GetDomain(), eventData.Node.Id.ToString(), "ZWave Node", ModuleEvents.Status_Level + (eventData.Instance == 0 ? "" : "." + eventData.Instance), eventValue);
+                    }
                     break;
                 case EventParameter.ThermostatMode:
                     eventPath = "Thermostat.Mode";
