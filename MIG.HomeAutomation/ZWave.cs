@@ -627,6 +627,9 @@ namespace MIG.Interfaces.HomeAutomation
             if (this.GetOption("Delay") != null)
                 controller.CommandDelay = int.Parse(this.GetOption("Delay").Value);
 
+            if (this.GetOption("StartupDiscovery") != null && this.GetOption("StartupDiscovery").Value == "0")
+                controller.StartupDiscovery = false;
+
             controller.PortName = this.GetOption("Port").Value;
             controller.Connect();
             return true;
@@ -721,7 +724,8 @@ namespace MIG.Interfaces.HomeAutomation
                 break;
             case ControllerStatus.Ready:
                 // Query all nodes (Basic Classes, Node Information Frame, Manufacturer Specific[, Command Class version])
-                controller.Discovery();
+                if(controller.StartupDiscovery)
+                    controller.Discovery();
                 break;
             case ControllerStatus.Error:
                 controller.Connect();
