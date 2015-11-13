@@ -234,6 +234,9 @@ namespace MIG.Interfaces.HomeAutomation
 
         public object InterfaceControl(MigInterfaceCommand request)
         {
+            while(controller.CommandDelay > 0 && controller.LastCommand.AddMilliseconds(controller.CommandDelay) > DateTime.Now) { }
+            controller.LastCommand = DateTime.Now;
+
             string returnValue = "";
             bool raiseEvent = false;
             string eventParameter = ModuleEvents.Status_Level;
@@ -621,6 +624,9 @@ namespace MIG.Interfaces.HomeAutomation
 
         public bool Connect()
         {
+            if (this.GetOption("Delay") != null)
+                controller.CommandDelay = int.Parse(this.GetOption("Delay").Value);
+
             controller.PortName = this.GetOption("Port").Value;
             controller.Connect();
             return true;
