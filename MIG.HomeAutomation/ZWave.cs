@@ -48,6 +48,7 @@ namespace MIG.Interfaces.HomeAutomation
         public enum Commands
         {
             Controller_Discovery,
+            Controller_HealNetwork,
             Controller_NodeAdd,
             Controller_NodeRemove,
             Controller_SoftReset,
@@ -257,6 +258,10 @@ namespace MIG.Interfaces.HomeAutomation
 
                 case Commands.Controller_Discovery:
                     controller.Discovery();
+                    break;
+
+                case Commands.Controller_HealNetwork:
+                    controller.HealNetwork();
                     break;
 
                 case Commands.Controller_SoftReset:
@@ -684,6 +689,7 @@ namespace MIG.Interfaces.HomeAutomation
             controller = new ZWaveController();
             controller.ControllerStatusChanged += Controller_ControllerStatusChanged;
             controller.DiscoveryProgress += Controller_DiscoveryProgress;
+            controller.HealProgress += Controller_HealProgress;
             controller.NodeOperationProgress += Controller_NodeOperationProgress;
             controller.NodeUpdated += Controller_NodeUpdated;
         }
@@ -779,6 +785,19 @@ namespace MIG.Interfaces.HomeAutomation
             }
         }
 
+        private void Controller_HealProgress(object sender, HealProgressEventArgs args)
+        {
+            switch (args.Status)
+            {
+                case HealStatus.HealStart:
+                    OnInterfacePropertyChanged(this.GetDomain(), "1", "Z-Wave Controller", "Controller.Status", "Network Heal Started");
+                    break;
+                case HealStatus.HealEnd:
+                    OnInterfacePropertyChanged(this.GetDomain(), "1", "Z-Wave Controller", "Controller.Status", "Network Heal Complete");
+                    OnInterfaceModulesChanged(this.GetDomain());
+                    break;
+            }
+        }
 
         private void Controller_NodeUpdated(object sender, NodeUpdatedEventArgs args)
         {
