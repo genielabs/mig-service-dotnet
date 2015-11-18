@@ -47,6 +47,8 @@ namespace MIG.Interfaces.HomeAutomation
 
         public enum Commands
         {
+            NotSet,
+
             Parameter_Status,
             Control_On,
             Control_Off,
@@ -174,7 +176,7 @@ namespace MIG.Interfaces.HomeAutomation
 
         public object InterfaceControl(MigInterfaceCommand request)
         {
-            string response = "[{ ResponseValue : 'OK' }]";
+            ResponseText response = new ResponseText("OK");
 
             string nodeId = request.Address;
             string option = request.GetOption(0);

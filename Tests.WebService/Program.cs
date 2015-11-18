@@ -30,17 +30,19 @@ namespace Tests.WebService
             var ws = migService.AddGateway("WebSocketGateway");
             ws.SetOption("Port", "8181");
 
+            migService.StartService();
+
+            // Enable some interfaces for testing...
             /*
             var zwave = migService.AddInterface("HomeAutomation.ZWave", "MIG.HomeAutomation.dll");
             zwave.SetOption("Port", "/dev/ttyUSB0");
             migService.EnableInterface("HomeAutomation.ZWave");
             */
+
             /*
             var upnp = migService.AddInterface("Protocols.UPnP", "MIG.Protocols.dll");
             migService.EnableInterface("Protocols.UPnP");
             */
-
-            migService.StartService();
 
             migService.RegisterApi("myapp/demo", (request) =>
             {

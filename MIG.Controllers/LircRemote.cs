@@ -54,6 +54,8 @@ namespace MIG.Interfaces.Controllers
 
         public enum Commands
         {
+            NotSet,
+
             Remotes_Search,
             Remotes_Add,
             Remotes_Remove,

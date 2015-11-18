@@ -64,6 +64,8 @@ namespace MIG.Interfaces.Protocols
 
         public enum Commands
         {
+            NotSet,
+
             Control_On,
             Control_Off,
             Control_Level,
@@ -80,6 +82,7 @@ namespace MIG.Interfaces.Protocols
             AvMedia_Play,
             AvMedia_Pause,
             AvMedia_Stop,
+            AvMedia_Seek,
 
             AvMedia_Prev,
             AvMedia_Next,
@@ -176,7 +179,7 @@ namespace MIG.Interfaces.Protocols
 
         public object InterfaceControl(MigInterfaceCommand request)
         {
-            string returnValue = "";
+            object returnValue = null;
             bool raiseEvent = false;
             string eventParameter = "Status.Unhandled";
             string eventValue = "";
@@ -303,7 +306,7 @@ namespace MIG.Interfaces.Protocols
                             var protocolUri = i.Attribute("protocolInfo");
                             if (protocolUri != null)
                             {
-                                returnValue = i.Value;
+                                returnValue = new ResponseText(i.Value);
                                 break;
                             }
                         }
@@ -381,11 +384,11 @@ namespace MIG.Interfaces.Protocols
                     };
                     InvokeUpnpDeviceService(device, "AVTransport", "GetTransportInfo", args);
                     //
-                    string jsonres = "[{ ";
+                    string jsonres = "{ ";
                     jsonres += "\"CurrentTransportState\" : \"" + transportState.DataValue + "\", ";
                     jsonres += "\"CurrentTransportStatus\" : \"" + transportStatus.DataValue + "\", ";
                     jsonres += "\"CurrentSpeed\" : \"" + currentSpeed.DataValue + "\"";
-                    jsonres += " }]";
+                    jsonres += " }";
                     //
                     returnValue = jsonres;
                 }
@@ -416,17 +419,17 @@ namespace MIG.Interfaces.Protocols
                     };
                     InvokeUpnpDeviceService(device, "AVTransport", "GetMediaInfo", args);
                     //
-                    string jsonres = "[{ ";
+                    string jsonres = "{ ";
                     jsonres += "\"NrTracks\" : \"" + nrTracks.DataValue + "\", ";
                     jsonres += "\"MediaDuration\" : \"" + mediaDuration.DataValue + "\", ";
                     jsonres += "\"CurrentURI\" : \"" + currentUri.DataValue + "\", ";
-                    jsonres += "\"CurrentURIMetaData\" : \"" + currentUriMetadata.DataValue.ToString().Replace("\"", "\\\"") + "\", ";
+                    jsonres += "\"CurrentURIMetaData\" : " + MIG.Utility.Serialization.JsonSerialize(GetJsonFromXmlItem(currentUriMetadata.DataValue.ToString())) + ", ";
                     jsonres += "\"NextURI\" : \"" + nextUri.DataValue + "\", ";
-                    jsonres += "\"NextURIMetaData\" : \"" + nextUriMetadata.DataValue.ToString().Replace("\"", "\\\"") + "\", ";
+                    jsonres += "\"NextURIMetaData\" : " + MIG.Utility.Serialization.JsonSerialize(GetJsonFromXmlItem(nextUriMetadata.DataValue.ToString())) + ", ";
                     jsonres += "\"PlayMedium\" : \"" + playMedium.DataValue + "\", ";
                     jsonres += "\"RecordMedium\" : \"" + recordMedium.DataValue + "\", ";
                     jsonres += "\"WriteStatus\" : \"" + writeStatus.DataValue + "\"";
-                    jsonres += " }]";
+                    jsonres += " }";
                     //
                     returnValue = jsonres;
                 }
@@ -455,16 +458,16 @@ namespace MIG.Interfaces.Protocols
                     };
                     InvokeUpnpDeviceService(device, "AVTransport", "GetPositionInfo", args);
                     //
-                    string jsonres = "[{";
+                    string jsonres = "{";
                     jsonres += "\"Track\" : \"" + currentTrack.DataValue + "\",";
                     jsonres += "\"TrackDuration\" : \"" + trackDuration.DataValue + "\",";
-                    jsonres += "\"TrackMetaData\" : \"" + trackMetadata.DataValue.ToString().Replace("\"", "\\\"") + "\",";
+                    jsonres += "\"TrackMetaData\" : " + MIG.Utility.Serialization.JsonSerialize(GetJsonFromXmlItem(trackMetadata.DataValue.ToString())) + ",";
                     jsonres += "\"TrackURI\" : \"" + trackUri.DataValue + "\",";
                     jsonres += "\"RelTime\" : \"" + relativeTime.DataValue + "\",";
                     jsonres += "\"AbsTime\" : \"" + absoluteTime.DataValue + "\",";
                     jsonres += "\"RelCount\" : \"" + relativeCount.DataValue + "\",";
                     jsonres += "\"AbsCount\" : \"" + absoluteCount.DataValue + "\"";
-                    jsonres += "}]";
+                    jsonres += "}";
                     //
                     returnValue = jsonres;
                 }
@@ -500,6 +503,19 @@ namespace MIG.Interfaces.Protocols
                         instanceId
                     };
                     InvokeUpnpDeviceService(device, "AVTransport", "Pause", args);
+                }
+                break;
+            case Commands.AvMedia_Seek:
+                {
+                    var instanceId = new UPnPArgument("InstanceID", (uint)0);
+                    var unit = new UPnPArgument("Unit", "REL_TIME");
+                    var target = new UPnPArgument("Target", request.GetOption(0));
+                    var args = new UPnPArgument[] { 
+                        instanceId,
+                        unit,
+                        target
+                    };
+                    InvokeUpnpDeviceService(device, "AVTransport", "Seek", args);
                 }
                 break;
             case Commands.AvMedia_Stop:
@@ -540,7 +556,7 @@ namespace MIG.Interfaces.Protocols
                         currentMute
                     };
                     InvokeUpnpDeviceService(device, "RenderingControl", "GetMute", args);
-                    returnValue = currentMute.DataValue.ToString();
+                    returnValue = new ResponseText(currentMute.DataValue.ToString());
                 }
                 break;
             case Commands.AvMedia_SetMute:
@@ -567,7 +583,7 @@ namespace MIG.Interfaces.Protocols
                         currentVolume
                     };
                     InvokeUpnpDeviceService(device, "RenderingControl", "GetVolume", args);
-                    returnValue = currentVolume.DataValue.ToString();
+                    returnValue = new ResponseText(currentVolume.DataValue.ToString());
                 }
                 break;
             case Commands.AvMedia_SetVolume:
@@ -666,6 +682,12 @@ namespace MIG.Interfaces.Protocols
         #endregion
 
         #region Private Members
+
+        private string GetJsonFromXmlItem(String metadata)
+        {
+            var item = XDocument.Parse(metadata, LoadOptions.SetBaseUri).Descendants().Where(ii => ii.Name.LocalName == "item").First();
+            return MIG.Utility.Serialization.JsonSerialize(item, true);
+        }
 
         private UPnPDevice GetUpnpDevice(string deviceId)
         {

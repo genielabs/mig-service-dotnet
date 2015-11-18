@@ -42,6 +42,8 @@ namespace MIG.Interfaces.Media
 
         public enum Commands
         {
+            NotSet,
+
             Camera_GetPicture,
             Camera_GetLuminance,
             Camera_SetDevice

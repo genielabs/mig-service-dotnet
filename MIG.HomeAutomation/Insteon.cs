@@ -43,6 +43,8 @@ namespace MIG.Interfaces.HomeAutomation
 
         public enum Commands
         {
+            NotSet,
+
             Parameter_Status,
             Control_On,
             Control_Off,
@@ -481,8 +483,8 @@ namespace MIG.Interfaces.HomeAutomation
             {
                 OnInterfacePropertyChanged(this.GetDomain(), nodeId, "Insteon Device", parameterPath, raiseParameter);
             }
-            //
-            return "";
+
+            return new ResponseText("OK");
         }
 
         #endregion

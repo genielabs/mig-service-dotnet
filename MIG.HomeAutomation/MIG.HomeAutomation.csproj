@@ -49,11 +49,11 @@
     <Reference Include="W800Rf32Lib">
       <HintPath>..\packages\W800Rf32Lib.1.0.5\lib\W800Rf32Lib.dll</HintPath>
     </Reference>
-    <Reference Include="ZWaveLib">
-      <HintPath>..\packages\ZWaveLib.1.0.7\lib\ZWaveLib.dll</HintPath>
-    </Reference>
     <Reference Include="XTenLib">
       <HintPath>..\packages\XTenLib.1.0.6\lib\XTenLib.dll</HintPath>
+    </Reference>
+    <Reference Include="ZWaveLib">
+      <HintPath>..\packages\ZWaveLib.1.0.8\lib\ZWaveLib.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
