@@ -53,7 +53,7 @@
       <HintPath>..\packages\XTenLib.1.0.6\lib\XTenLib.dll</HintPath>
     </Reference>
     <Reference Include="ZWaveLib">
-      <HintPath>..\packages\ZWaveLib.1.0.8\lib\ZWaveLib.dll</HintPath>
+      <HintPath>..\packages\ZWaveLib.1.0.9\lib\ZWaveLib.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
