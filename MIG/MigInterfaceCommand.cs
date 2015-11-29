@@ -56,16 +56,8 @@ namespace MIG
                         Command = requests[2];
                         if (requests.Length > 3)
                         {
-                            var decodedFirstOption = System.Uri.UnescapeDataString(requests[3]);
-                            if(decodedFirstOption == requests[3])
-                            {
-                                options = new string[requests.Length - 3];
-                                Array.Copy(requests, 3, options, 0, requests.Length - 3);
-                            }
-                            else // if we have URL encoded options
-                            {
-                                options = decodedFirstOption.Trim('/').Split(new char[] { '/' }, StringSplitOptions.None);
-                            }
+                            options = new string[requests.Length - 3];
+                            Array.Copy(requests, 3, options, 0, requests.Length - 3);
                         }
                     }
                 }
