@@ -352,7 +352,9 @@ namespace MIG.Gateways
                                                 // send events
                                                 try
                                                 {
-                                                    byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + entry.Event.UnixTimestamp.ToString("R", CultureInfo.InvariantCulture) + "\ndata: " + MigService.JsonSerialize(entry.Event) + "\n\n");
+                                                    // The following throws an error on some mono-arm (Input string was not in the correct format)
+                                                    // entry.Event.UnixTimestamp.ToString("R", CultureInfo.InvariantCulture)
+                                                    byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + entry.Event.UnixTimestamp.ToString().Replace(",", ".") + "\ndata: " + MigService.JsonSerialize(entry.Event) + "\n\n");
                                                     response.OutputStream.Write(data, 0, data.Length);
                                                     //response.OutputStream.Flush();
                                                     lastTimeStamp = entry.Timestamp;
@@ -471,11 +473,11 @@ namespace MIG.Gateways
                                             {
                                                 // TODO: !IMPORTANT! exclude from caching files that contains SSI tags!
                                                 response.StatusCode = (int)HttpStatusCode.NotModified;
-                                                response.Headers.Set(HttpResponseHeader.Date, file.LastWriteTimeUtc.ToString("r"));
+                                                response.Headers.Set(HttpResponseHeader.Date, file.LastWriteTimeUtc.ToString().Replace(",", "."));
                                             }
                                             else
                                             {
-                                                response.Headers.Set(HttpResponseHeader.LastModified, file.LastWriteTimeUtc.ToString("r"));
+                                                response.Headers.Set(HttpResponseHeader.LastModified, file.LastWriteTimeUtc.ToString().Replace(",", "."));
                                                 if (disableCacheControl)
                                                 {
                                                     response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache, no-store, must-revalidate");
