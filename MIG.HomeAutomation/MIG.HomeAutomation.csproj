@@ -43,17 +43,17 @@
     <Reference Include="SoapBox.FluentDwelling">
       <HintPath>Externals\FluentDwelling\SoapBox.FluentDwelling.dll</HintPath>
     </Reference>
-    <Reference Include="SerialPortLib">
-      <HintPath>..\packages\SerialPortLib.1.0.10\lib\SerialPortLib.dll</HintPath>
-    </Reference>
     <Reference Include="W800Rf32Lib">
       <HintPath>..\packages\W800Rf32Lib.1.0.5\lib\W800Rf32Lib.dll</HintPath>
     </Reference>
-    <Reference Include="XTenLib">
-      <HintPath>..\packages\XTenLib.1.0.6\lib\XTenLib.dll</HintPath>
+    <Reference Include="SerialPortLib">
+      <HintPath>..\packages\SerialPortLib.1.0.11\lib\SerialPortLib.dll</HintPath>
     </Reference>
     <Reference Include="ZWaveLib">
-      <HintPath>..\packages\ZWaveLib.1.0.9\lib\ZWaveLib.dll</HintPath>
+      <HintPath>..\packages\ZWaveLib.1.0.10\lib\ZWaveLib.dll</HintPath>
+    </Reference>
+    <Reference Include="XTenLib">
+      <HintPath>..\packages\XTenLib.1.0.7\lib\XTenLib.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

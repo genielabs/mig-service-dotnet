@@ -61,6 +61,12 @@ namespace MIG.Interfaces.HomeAutomation
             Basic_Get,
             Basic_Set,
 
+            SwitchBinary_Get,
+            SwitchBinary_Set,
+
+            SwitchMultilevel_Get,
+            SwitchMultilevel_Set,
+
             MultiInstance_Get,
             MultiInstance_Set,
             MultiInstance_GetCount,
@@ -114,6 +120,10 @@ namespace MIG.Interfaces.HomeAutomation
         // Z-Wave specific events
         const string EventPath_Basic
            = "ZWaveNode.Basic";
+        const string EventPath_SwitchBinary
+            = "ZWaveNode.SwitchBinary";
+        const string EventPath_SwitchMultilevel
+            = "ZWaveNode.SwitchMultilevel";
         const string EventPath_WakeUpInterval
             = "ZWaveNode.WakeUpInterval";
         const string EventPath_Battery
@@ -329,6 +339,34 @@ namespace MIG.Interfaces.HomeAutomation
                     returnValue = GetResponseValue(nodeNumber, EventPath_Basic);
                     break;
 
+                case Commands.SwitchBinary_Set:
+                    {
+                        raiseEvent = true;
+                        var level = int.Parse(request.GetOption(0));
+                        eventValue = level.ToString(CultureInfo.InvariantCulture);
+                        SwitchBinary.Set(node, (byte)level);
+                    }
+                    break;
+
+                case Commands.SwitchBinary_Get:
+                    SwitchBinary.Get(node);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_SwitchBinary);
+                    break;
+
+                case Commands.SwitchMultilevel_Set:
+                    {
+                        raiseEvent = true;
+                        var level = int.Parse(request.GetOption(0));
+                        eventValue = level.ToString(CultureInfo.InvariantCulture);
+                        SwitchMultilevel.Set(node, (byte)level);
+                    }
+                    break;
+
+                case Commands.SwitchMultilevel_Get:
+                    SwitchMultilevel.Get(node);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_SwitchMultilevel);
+                    break;
+
                 case Commands.MultiInstance_GetCount:
                     {
                         string commandType = request.GetOption(0).Replace(".", "");
@@ -496,15 +534,26 @@ namespace MIG.Interfaces.HomeAutomation
 
                 case Commands.Control_On:
                     raiseEvent = true;
-                    eventValue = "1";
-                    Basic.Set(node, 0xFF);
+                    double lastLevel = GetNormalizedValue((double)GetNodeLastLevel(node));
+                    eventValue = lastLevel > 0 ? lastLevel.ToString(CultureInfo.InvariantCulture) : "1";
+                    if (node.SupportCommandClass(CommandClass.SwitchMultilevel))
+                        SwitchMultilevel.Set(node, 0xFF);
+                    else if (node.SupportCommandClass(CommandClass.SwitchBinary))
+                        SwitchBinary.Set(node, 0xFF);
+                    else
+                        Basic.Set(node, 0xFF);
                     SetNodeLevel(node, 0xFF);
                     break;
 
                 case Commands.Control_Off:
                     raiseEvent = true;
                     eventValue = "0";
-                    Basic.Set(node, 0x00);
+                    if (node.SupportCommandClass(CommandClass.SwitchMultilevel))
+                        SwitchMultilevel.Set(node, 0x00);
+                    else if (node.SupportCommandClass(CommandClass.SwitchBinary))
+                        SwitchBinary.Set(node, 0x00);
+                    else
+                        Basic.Set(node, 0x00);
                     SetNodeLevel(node, 0x00);
                     break;
 
@@ -529,14 +578,25 @@ namespace MIG.Interfaces.HomeAutomation
                     raiseEvent = true;
                     if (GetNodeLevel(node) == 0)
                     {
-                        eventValue = "1";
-                        Basic.Set(node, 0xFF);
+                        double lastOnLevel = GetNormalizedValue((double)GetNodeLastLevel(node));
+                        eventValue = lastOnLevel > 0 ? lastOnLevel.ToString(CultureInfo.InvariantCulture) : "1";
+                        if (node.SupportCommandClass(CommandClass.SwitchMultilevel))
+                            SwitchMultilevel.Set(node, 0xFF);
+                        else if (node.SupportCommandClass(CommandClass.SwitchBinary))
+                            SwitchBinary.Set(node, 0xFF);
+                        else
+                            Basic.Set(node, 0xFF);
                         SetNodeLevel(node, 0xFF);
                     }
                     else
                     {
                         eventValue = "0";
-                        Basic.Set(node, 0x00);
+                        if (node.SupportCommandClass(CommandClass.SwitchMultilevel))
+                            SwitchMultilevel.Set(node, 0x00);
+                        else if (node.SupportCommandClass(CommandClass.SwitchBinary))
+                            SwitchBinary.Set(node, 0x00);
+                        else
+                            Basic.Set(node, 0x00);
                         SetNodeLevel(node, 0x00);
                     }
                     break;
@@ -941,22 +1001,29 @@ namespace MIG.Interfaces.HomeAutomation
                 case EventParameter.WakeUpNotify:
                     eventPath = "ZWaveNode.WakeUpNotify";
                     break;
-                case EventParameter.Level:
+                case EventParameter.Basic:
                     eventPath = EventPath_Basic;
-                    if (eventData.Node.SupportCommandClass(CommandClass.SwitchBinary) || eventData.Node.SupportCommandClass(CommandClass.SwitchMultilevel))
                     {
-                        // binary switches have [0/255], while multilevel switches [0-99],
-                        // normalize Status.Level to [0.0 <-> 1.0]
-                        double normalizedval = (Math.Round((double)eventValue / 100D, 2));
-                        if (normalizedval >= 0.99)
-                            normalizedval = 1.0;
-                        OnInterfacePropertyChanged(this.GetDomain(), eventData.Node.Id.ToString(), "ZWave Node", ModuleEvents.Status_Level + (eventData.Instance == 0 ? "" : "." + eventData.Instance), normalizedval.ToString(CultureInfo.InvariantCulture));
+                        double normalizedLevel = GetNormalizedValue((double)eventValue);
+                        OnInterfacePropertyChanged(this.GetDomain(), eventData.Node.Id.ToString(), "ZWave Node", ModuleEvents.Status_Level + (eventData.Instance == 0 ? "" : "." + eventData.Instance), normalizedLevel.ToString(CultureInfo.InvariantCulture));
                     }
-                    else
+                    SetNodeLevel(eventData.Node, Convert.ToByte((double)eventValue));
+                    break;
+                case EventParameter.SwitchBinary:
+                    eventPath = EventPath_SwitchBinary;
                     {
-                        // if the node is not a Binary Switch or a Multilevel Switch, leave value as is
-                        OnInterfacePropertyChanged(this.GetDomain(), eventData.Node.Id.ToString(), "ZWave Node", ModuleEvents.Status_Level + (eventData.Instance == 0 ? "" : "." + eventData.Instance), eventValue);
+                        double normalizedLevel = GetNormalizedValue((double)eventValue);
+                        OnInterfacePropertyChanged(this.GetDomain(), eventData.Node.Id.ToString(), "ZWave Node", ModuleEvents.Status_Level + (eventData.Instance == 0 ? "" : "." + eventData.Instance), normalizedLevel.ToString(CultureInfo.InvariantCulture));
                     }
+                    SetNodeLevel(eventData.Node, Convert.ToByte((double)eventValue));
+                    break;
+                case EventParameter.SwitchMultilevel:
+                    eventPath = EventPath_SwitchMultilevel;
+                    {
+                        double normalizedLevel = GetNormalizedValue((double)eventValue);
+                        OnInterfacePropertyChanged(this.GetDomain(), eventData.Node.Id.ToString(), "ZWave Node", ModuleEvents.Status_Level + (eventData.Instance == 0 ? "" : "." + eventData.Instance), normalizedLevel.ToString(CultureInfo.InvariantCulture));
+                    }
+                    SetNodeLevel(eventData.Node, Convert.ToByte((double)eventValue));
                     break;
                 case EventParameter.ThermostatMode:
                     eventPath = "Thermostat.Mode";
@@ -1046,11 +1113,26 @@ namespace MIG.Interfaces.HomeAutomation
         private void SetNodeLevel(ZWaveNode node, int level)
         {
             node.UpdateData("Level", level);
+            if (level > 0)
+                node.UpdateData("LastLevel", level);
         }
 
         private int GetNodeLevel(ZWaveNode node)
         {
             return (int)node.GetData("Level", 0).Value;
+        }
+
+        private int GetNodeLastLevel(ZWaveNode node)
+        {
+            return (int)node.GetData("LastLevel", 0).Value;
+        }
+
+        private double GetNormalizedValue(double val)
+        {
+            double normalizedval = (Math.Round(val / 100D, 2));
+            if (normalizedval >= 0.99)
+                normalizedval = 1.0;
+            return normalizedval;
         }
 
         protected virtual void OnInterfaceModulesChanged(string domain)
