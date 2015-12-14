@@ -86,6 +86,8 @@ namespace MIG.Interfaces.HomeAutomation
             WakeUp_Get,
             WakeUp_Set,
             WakeUp_SendToSleep,
+            WakeUp_GetAlwaysAwake,
+            WakeUp_SetAlwaysAwake,
 
             SensorBinary_Get,
             SensorMultiLevel_Get,
@@ -507,6 +509,14 @@ namespace MIG.Interfaces.HomeAutomation
 
                 case Commands.WakeUp_SendToSleep:
                     WakeUp.SendToSleep(node);
+                    break;
+
+                case Commands.WakeUp_GetAlwaysAwake:
+                    returnValue = new ResponseText(WakeUp.GetAlwaysAwake(node) ? "1" : "0");
+                    break;
+
+                case Commands.WakeUp_SetAlwaysAwake:
+                    WakeUp.SetAlwaysAwake(node, uint.Parse(request.GetOption(0)) == 1 ? true : false);
                     break;
 
                 case Commands.Version_Get:
