@@ -465,7 +465,7 @@ namespace MIG.Gateways
                                             {
                                                 var modifiedSince = DateTime.MinValue;
                                                 DateTime.TryParse(request.Headers["If-Modified-Since"], out modifiedSince);
-                                                if (file.LastWriteTime.Equals(modifiedSince))
+                                                if (file.LastWriteTime.ToUniversalTime().Equals(modifiedSince))
                                                     modified = false;
                                             }
                                             bool disableCacheControl = HttpCacheIgnoreCheck(url);
