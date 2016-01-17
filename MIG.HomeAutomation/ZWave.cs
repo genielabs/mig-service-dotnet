@@ -32,9 +32,9 @@ using LibUsbDotNet.LibUsb;
 using LibUsbDotNet.Main;
 
 using ZWaveLib;
+using ZWaveLib.CommandClasses;
 
 using MIG.Interfaces.HomeAutomation.Commons;
-using ZWaveLib.CommandClasses;
 using MIG.Config;
 
 namespace MIG.Interfaces.HomeAutomation
@@ -112,6 +112,7 @@ namespace MIG.Interfaces.HomeAutomation
 
             UserCode_Set,
 
+            Version_Report,
             Version_Get,
             Version_GetAll,
 
@@ -142,6 +143,8 @@ namespace MIG.Interfaces.HomeAutomation
             = "ZWaveNode.RoutingInfo";
         const string EventPath_ManufacturerSpecific
             = "ZWaveNode.ManufacturerSpecific";
+        const string EventPath_VersionReport
+            = "ZWaveNode.VersionReport";
 
         #endregion
 
@@ -462,6 +465,11 @@ namespace MIG.Interfaces.HomeAutomation
                 case Commands.NodeInfo_Get:
                     controller.GetNodeInformationFrame(nodeNumber);
                     returnValue = GetResponseValue(nodeNumber, EventPath_NodeInfo);
+                    break;
+
+                case Commands.Version_Report:
+                    ZWaveLib.CommandClasses.Version.Report(node);
+                    returnValue = GetResponseValue(nodeNumber, EventPath_VersionReport);
                     break;
 
                 case Commands.Battery_Get:
@@ -1070,8 +1078,16 @@ namespace MIG.Interfaces.HomeAutomation
                     eventPath = "ZWaveNode.SecuredNodeInfo";
                     break;
                 case EventParameter.VersionCommandClass:
-                    eventPath = "ZWaveNode.Version." + (eventValue as ZWaveLib.Values.VersionValue).CmdClass;
-                    eventValue = (eventValue as ZWaveLib.Values.VersionValue).Version;
+                    if (eventValue is NodeVersion)
+                    {
+                        eventPath = "ZWaveNode.VersionReport";
+                        eventValue = (eventValue as NodeVersion).ToString();
+                    }
+                    else
+                    {
+                        eventPath = "ZWaveNode.Version." + (eventValue as ZWaveLib.Values.VersionValue).CmdClass;
+                        eventValue = (eventValue as ZWaveLib.Values.VersionValue).Version;
+                    }
                     break;
                 default:
                     MigService.Log.Warn("Unhandled event from node {0} (Event={1}, Id={2}, Value={3})", eventData.Node.Id, eventData.Parameter, eventData.Instance, eventValue);
