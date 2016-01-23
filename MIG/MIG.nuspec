@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+    <metadata>
+        <id>MIG</id>
+        <version>1.0.0-beta</version>
+        <title>MIG Service</title>
+        <authors>Generoso Martello</authors>
+        <owners>G-Labs</owners>
+        <licenseUrl>https://github.com/genielabs/mig-service-dotnet/blob/master/LICENSE</licenseUrl>
+        <projectUrl>https://github.com/genielabs/mig-service-dotnet/</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>MIG is a .Net library providing an integrated solution for developing multi-protocol networked applications and real time web applications.</description>
+        <summary>MIG Service (.NET / Mono)</summary>
+        <releaseNotes>Initial release</releaseNotes>
+        <copyright>G-Labs</copyright>
+        <tags>web gateway middleware multi-protocol networking interoperability</tags>
+        <dependencies>
+            <dependency id="CommonMark.NET" version="0.9.1" />
+            <dependency id="Newtonsoft.Json" version="7.0.1" />
+            <dependency id="NLog" version="4.1.0" />
+            <dependency id="UDE.CSharp" version="1.1.0" />
+            <dependency id="WebSocketSharp" version="1.0.3-rc9" />
+        </dependencies>
+    </metadata>
+    <files>
+        <file src="bin\Debug\MIG.dll" target="lib\MIG.dll" />
+        <file src="bin\Debug\MIG.dll.mdb" target="lib\MIG.dll.mdb" />
+    </files>
+</package>
