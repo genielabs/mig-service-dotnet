@@ -26,6 +26,13 @@ using System.Text;
 using System.Threading;
 using System.Linq;
 using System.Globalization;
+using System.IO;
+using System.Xml.Linq;
+using System.Net;
+
+using ICSharpCode.SharpZipLib;
+using ICSharpCode.SharpZipLib.Zip;
+using ICSharpCode.SharpZipLib.Core;
 
 using LibUsbDotNet;
 using LibUsbDotNet.LibUsb;
@@ -36,6 +43,9 @@ using ZWaveLib.CommandClasses;
 
 using MIG.Interfaces.HomeAutomation.Commons;
 using MIG.Config;
+using System.Xml.XPath;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace MIG.Interfaces.HomeAutomation
 {
@@ -117,7 +127,10 @@ namespace MIG.Interfaces.HomeAutomation
             Version_GetAll,
 
             DoorLock_Set,
-            DoorLock_Get
+            DoorLock_Get,
+
+            Db_Update,
+            Db_GetDevice
         }
 
         // Z-Wave specific events
@@ -253,7 +266,7 @@ namespace MIG.Interfaces.HomeAutomation
 
         public object InterfaceControl(MigInterfaceCommand request)
         {
-            ResponseText returnValue = new ResponseText("OK");
+            object returnValue = "OK";
             bool raiseEvent = false;
             string eventParameter = ModuleEvents.Status_Level;
             string eventValue = "";
@@ -312,7 +325,7 @@ namespace MIG.Interfaces.HomeAutomation
                         Thread.Sleep(500);
                     }
                     controller.StopNodeAdd();
-                    returnValue = new ResponseText(lastAddedNode.ToString());
+                    returnValue = lastAddedNode.ToString();
                     break;
 
                 case Commands.Controller_NodeRemove:
@@ -327,7 +340,7 @@ namespace MIG.Interfaces.HomeAutomation
                         Thread.Sleep(500);
                     }
                     controller.StopNodeRemove();
-                    returnValue = new ResponseText(lastRemovedNode.ToString());
+                    returnValue = lastRemovedNode.ToString();
                     break;
 
                 case Commands.Basic_Set:
@@ -520,7 +533,7 @@ namespace MIG.Interfaces.HomeAutomation
                     break;
 
                 case Commands.WakeUp_GetAlwaysAwake:
-                    returnValue = new ResponseText(WakeUp.GetAlwaysAwake(node) ? "1" : "0");
+                    returnValue = WakeUp.GetAlwaysAwake(node) ? "1" : "0";
                     break;
 
                 case Commands.WakeUp_SetAlwaysAwake:
@@ -528,7 +541,7 @@ namespace MIG.Interfaces.HomeAutomation
                     break;
 
                 case Commands.Version_Get:
-                    returnValue = new ResponseText("ERROR");
+                    returnValue = "ERROR";
                     CommandClass cclass;
                     Enum.TryParse<CommandClass>(request.GetOption(0), out cclass);
                     if (cclass != CommandClass.NotSet)
@@ -536,7 +549,7 @@ namespace MIG.Interfaces.HomeAutomation
                         var nodeCclass = node.GetCommandClass(cclass);
                         if (nodeCclass != null && nodeCclass.Version != 0)
                         {
-                            returnValue = new ResponseText(nodeCclass.Version.ToString());
+                            returnValue = nodeCclass.Version.ToString();
                         }
                         else
                         {
@@ -697,6 +710,19 @@ namespace MIG.Interfaces.HomeAutomation
                         DoorLock.Set(node, mode);
                     }
                     break;
+
+                case Commands.Db_Update:
+                    {
+                        var p1db = new Pepper1Db();
+                        p1db.Update(request.GetOption(0));
+                        break;
+                    }
+                case Commands.Db_GetDevice:
+                    {
+                        var p1db = new Pepper1Db();
+                        returnValue = p1db.GetDeviceInfo(request.GetOption(0), request.GetOption(1));
+                        break;
+                    }
                 }
             }
 
@@ -1081,7 +1107,7 @@ namespace MIG.Interfaces.HomeAutomation
                     if (eventValue is NodeVersion)
                     {
                         eventPath = "ZWaveNode.VersionReport";
-                        eventValue = (eventValue as NodeVersion).ToString();
+                        eventValue = eventValue as NodeVersion;
                     }
                     else
                     {
@@ -1100,14 +1126,14 @@ namespace MIG.Interfaces.HomeAutomation
             }
         }
 
-        private ResponseText GetResponseValue(byte nodeNumber, string eventPath)
+        private object GetResponseValue(byte nodeNumber, string eventPath)
         {
-            ResponseText returnValue = new ResponseText("ERR_TIMEOUT");
+            object returnValue = null;
             InterfacePropertyChangedEventHandler eventHandler = new InterfacePropertyChangedEventHandler((sender, property) =>
             {
                 if (property.EventData.Source == nodeNumber.ToString() && property.EventData.Property == eventPath)
                 {
-                    returnValue = new ResponseText(property.EventData.Value.ToString());
+                    returnValue = property.EventData.Value;
                 }
             });
             InterfacePropertyChanged += eventHandler;
@@ -1115,7 +1141,7 @@ namespace MIG.Interfaces.HomeAutomation
             {
                 int timeout = 0;
                 int delay = 100;
-                while (returnValue.ResponseValue == "ERR_TIMEOUT" && timeout < ZWaveMessage.SendMessageTimeoutMs / delay)
+                while (returnValue == null && timeout < ZWaveMessage.SendMessageTimeoutMs / delay)
                 {
                     Thread.Sleep(delay);
                     timeout++;
@@ -1124,7 +1150,7 @@ namespace MIG.Interfaces.HomeAutomation
             t.Start();
             t.Join(ZWaveMessage.SendMessageTimeoutMs);
             InterfacePropertyChanged -= eventHandler;
-            return returnValue;
+            return returnValue ?? "ERR_TIMEOUT";
         }
 
         private string GetIndexedParameterPath(string basePath, int parameterId)
@@ -1186,4 +1212,169 @@ namespace MIG.Interfaces.HomeAutomation
 
     }
 
+
+    public class Pepper1Db
+    {
+        private const string dbFilename = "p1db.xml";
+        private const string archiveFilename = "archive.zip";
+        private const string tempFolder = "temp";
+
+        public bool Update(string pepper1Url)
+        {
+            ZipConstants.DefaultCodePage = System.Text.Encoding.UTF8.CodePage;
+
+            // request archive from P1 db
+            using (var client = new WebClient ()) 
+            {
+                try 
+                {
+                    Console.WriteLine ("Downloading archive from {0}.", pepper1Url);
+                    client.DownloadFile (pepper1Url, archiveFilename);
+                } 
+                catch (Exception ex) 
+                {
+                    Console.WriteLine (ex.Message);
+                    return false;
+                }
+            }
+
+            // extract archive
+            Console.WriteLine ("Extracting archive from '{0}' to '{1}' folder.", archiveFilename, tempFolder);
+            ExtractZipFile(archiveFilename, null, tempFolder);
+
+            Console.WriteLine ("Creating consolidated DB.");
+            var p1db = new XDocument();
+            var dbElement = new XElement ("Devices");
+
+            // for each xml file read it content and add to one file
+            var files = Directory.GetFiles(tempFolder, "*.xml");
+            foreach (var file in files)
+            {
+                try
+                {
+                    var fi = new FileInfo (file);
+                    var xDoc = XElement.Load (fi.OpenText ());
+                    dbElement.Add (xDoc.RemoveAllNamespaces());
+                }
+                catch (Exception)
+                {
+                }
+            }
+
+            // Also we need to include some predefined entries from db, distributed with HG
+            // for devices that couldn't be found in pepper1db.
+            // TODO
+
+            p1db.Add (dbElement);
+            var dbFile = new FileInfo (dbFilename);
+            using (var writer = dbFile.CreateText())
+            {
+                p1db.Save (writer);
+            }
+            Console.WriteLine ("DB saved: {0}.", dbFilename);
+            return true;
+        }
+
+        /// <summary>
+        /// Searches local pepper1 db for the specified device and returns an array of matched device infos in JSON.
+        /// </summary>
+        /// <returns>The device info.</returns>
+        /// <param name="manufacturerId">Manufacturer identifier.</param>
+        /// <param name="version">Version (in format appVersion.appSubVersion).</param>
+        public string GetDeviceInfo(string manufacturerId, string version)
+        {
+            var dbFile = new FileInfo (dbFilename);
+            XDocument p1db;
+            using (var reader = dbFile.OpenText ())
+            {
+                p1db = XDocument.Load(reader);
+            }
+
+            var mIdParts = manufacturerId.Split(new []{':'}, StringSplitOptions.RemoveEmptyEntries);
+            if(mIdParts.Length != 3)
+                throw new ArgumentException(string.Format("Wrong manufacturerId ({0})", manufacturerId));
+
+            var query = string.Format("deviceData/manufacturerId[@value=\"{0}\"] and deviceData/productType[@value=\"{1}\"] and deviceData/productId[@value=\"{2}\"]", mIdParts[0], mIdParts[1], mIdParts[2]);
+            if (!string.IsNullOrEmpty(version))
+            {
+                var vParts = version.Split(new []{'.'}, StringSplitOptions.RemoveEmptyEntries);
+                query += string.Format(" and deviceData/appVersion[@value=\"{0}\"] and deviceData/appSubVersion[@value=\"{1}\"]", vParts[0], vParts[1]);
+            }
+            var baseQuery = string.Format("//ZWaveDevice[ {0} ]", query);
+            var res = p1db.XPathSelectElements (baseQuery).ToList();
+            Console.WriteLine("Found {0} elements in p1Db with query {1}", res.Count, baseQuery);
+
+            if (res.Count == 0)
+            {
+                // try to find generic device info without version information
+                query = string.Format("deviceData/manufacturerId[@value=\"{0}\"] and deviceData/productType[@value=\"{1}\"] and deviceData/productId[@value=\"{2}\"]", mIdParts[0], mIdParts[1], mIdParts[2]);
+                baseQuery = string.Format("//ZWaveDevice[ {0} ]", query);
+                res = p1db.XPathSelectElements (baseQuery).ToList();
+                Console.WriteLine("Found {0} elements in p1Db with query {1}", res.Count, baseQuery);
+            }
+
+            return JsonConvert.SerializeObject(res, Newtonsoft.Json.Formatting.Indented, new []{new XmlNodeConverter()});
+        }
+
+        private static void ExtractZipFile(string archiveFilenameIn, string password, string outFolder)
+        {
+            ZipFile zf = null;
+            try {
+                FileStream fs = File.OpenRead(archiveFilenameIn);
+                zf = new ZipFile(fs);
+                if (!String.IsNullOrEmpty(password)) {
+                    zf.Password = password;     // AES encrypted entries are handled automatically
+                }
+                foreach (ZipEntry zipEntry in zf) {
+                    if (!zipEntry.IsFile) {
+                        continue;           // Ignore directories
+                    }
+                    String entryFileName = zipEntry.Name;
+                    // to remove the folder from the entry:- entryFileName = Path.GetFileName(entryFileName);
+                    // Optionally match entrynames against a selection list here to skip as desired.
+                    // The unpacked length is available in the zipEntry.Size property.
+
+                    byte[] buffer = new byte[4096];     // 4K is optimum
+                    Stream zipStream = zf.GetInputStream(zipEntry);
+
+                    // Manipulate the output filename here as desired.
+                    String fullZipToPath = Path.Combine(outFolder, entryFileName);
+                    string directoryName = Path.GetDirectoryName(fullZipToPath);
+                    if (directoryName.Length > 0)
+                        Directory.CreateDirectory(directoryName);
+
+                    // Unzip file in buffered chunks. This is just as fast as unpacking to a buffer the full size
+                    // of the file, but does not waste memory.
+                    // The "using" will close the stream even if an exception occurs.
+                    using (FileStream streamWriter = File.Create(fullZipToPath)) {
+                        StreamUtils.Copy(zipStream, streamWriter, buffer);
+                    }
+                }
+            } finally {
+                if (zf != null) {
+                    zf.IsStreamOwner = true; // Makes close also shut the underlying stream
+                    zf.Close(); // Ensure we release resources
+                }
+            }
+        }
+    }
+
+    public static class Extensions
+    {
+        public static XElement RemoveAllNamespaces(this XElement xmlDocument)
+        {
+            XElement xElement = new XElement(xmlDocument.Name.LocalName);
+            foreach (XAttribute attribute in xmlDocument.Attributes().Where(x => !x.IsNamespaceDeclaration))
+                xElement.Add(attribute);
+
+            if (!xmlDocument.HasElements)
+            {                
+                xElement.Value = xmlDocument.Value;                
+                return xElement;
+            }
+
+            xElement.Add(xmlDocument.Elements().Select(el => RemoveAllNamespaces(el)));
+            return xElement;
+        }
+    }
 }

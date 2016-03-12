@@ -30,7 +30,7 @@ using MIG.Config;
 
 namespace MIG.Gateways
 {
-    public class TcpSocketGateway : MigGateway
+    public class TcpSocketGateway : IMigGateway
     {
         private const int bufferLength = 1024;
 

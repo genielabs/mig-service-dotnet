@@ -64,7 +64,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utility\Encryption.cs" />
     <Compile Include="Utility\Networking.cs" />
-    <Compile Include="MigGateway.cs" />
     <Compile Include="MigInterface.cs" />
     <Compile Include="MigInterfaceCommand.cs" />
     <Compile Include="MigService.cs" />
@@ -77,6 +76,7 @@
     <Compile Include="MigContext.cs" />
     <Compile Include="Gateways\MqttServiceGateway.cs" />
     <Compile Include="Utility\Serialization.cs" />
+    <Compile Include="IMigGateway.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

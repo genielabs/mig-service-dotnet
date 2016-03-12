@@ -100,7 +100,7 @@ namespace MIG
         //public event -- ServiceStopped;
 
         // TODO: use List instead of Dictionary...
-        public readonly List<MigGateway> Gateways;
+        public readonly List<IMigGateway> Gateways;
         public readonly List<MigInterface> Interfaces;
 
         #endregion
@@ -110,7 +110,7 @@ namespace MIG
         public MigService()
         {
             Interfaces = new List<MigInterface>();
-            Gateways = new List<MigGateway>();
+            Gateways = new List<IMigGateway>();
             configuration = new MigServiceConfiguration();
             dynamicApi = new DynamicApi();
         }
@@ -213,7 +213,7 @@ namespace MIG
         /// </summary>
         /// <returns>The gateway.</returns>
         /// <param name="className">Class name.</param>
-        public MigGateway GetGateway(string className)
+        public IMigGateway GetGateway(string className)
         {
             return Gateways.Find(gw => gw.GetName().Equals(className));
         }
@@ -224,15 +224,15 @@ namespace MIG
         /// <returns>The gateway.</returns>
         /// <param name="className">Class name.</param>
         /// <param name="assemblyName">Assembly name.</param>
-        public MigGateway AddGateway(string className, string assemblyName = "")
+        public IMigGateway AddGateway(string className, string assemblyName = "")
         {
-            MigGateway migGateway = GetGateway(className);
+            IMigGateway migGateway = GetGateway(className);
             if (migGateway == null)
             {
                 try
                 {
                     var type = TypeLookup("MIG.Gateways." + className, assemblyName);
-                    migGateway = (MigGateway)Activator.CreateInstance(type);
+                    migGateway = (IMigGateway)Activator.CreateInstance(type);
                 }
                 catch (Exception e)
                 {
