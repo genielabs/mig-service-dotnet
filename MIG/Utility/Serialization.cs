@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Reflection;
 using System.Globalization;
-using Newtonsoft.Json.Linq;
 
 namespace MIG.Utility
 {
@@ -20,7 +19,7 @@ namespace MIG.Utility
         }
 
         // Work around for "Input string was not in the correct format" when running on some mono-arm platforms
-        public class FormattedDecimalConverter : JsonConverter
+        class FormattedDecimalConverter : JsonConverter
         {
             private CultureInfo culture;
 
@@ -43,26 +42,11 @@ namespace MIG.Utility
 
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
             {
-                JToken token = JToken.Load(reader);
-                if (token.Type == JTokenType.Float || token.Type == JTokenType.Integer)
-                {
-                    return token.ToObject<decimal>();
-                }
-                if (token.Type == JTokenType.String)
-                {
-                    // customize this to suit your needs
-                    return Decimal.Parse(token.ToString(), this.culture);
-                }
-                if (token.Type == JTokenType.Null && objectType == typeof(decimal?))
-                {
-                    return null;
-                }
-                throw new JsonSerializationException("Unexpected token type: " + 
-                    token.Type.ToString());
+                throw new NotImplementedException();
             }
         }
 
-        public class CustomResolver : DefaultContractResolver
+        class CustomResolver : DefaultContractResolver
         {
             protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
             {

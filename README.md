@@ -178,9 +178,19 @@ So in the previous example where we used the **RegisterApi** methods, we have:
 
 ## NuGet Package
 
-MigService  is available as a [NuGet package](https://www.nuget.org/packages/MigService).
+MigService v1.0.0-beta *(pre-release)* is available as a [NuGet package](https://www.nuget.org/packages/MigService).
 
-Run `Install-Package MigService` in the [Package Manager Console](http://docs.nuget.org/docs/start-here/using-the-package-manager-console) or search for “MigService” in your IDE’s package management plug-in.
+Run `Install-Package MigService` in the [Package Manager Console](http://docs.nuget.org/docs/start-here/using-the-package-manager-console) or search for “MIG Service” in your IDE’s package management plug-in.
+
+## Related Projects
+
+- https://github.com/genielabs/intel-upnp-dlna
+- https://github.com/genielabs/mig-controllers-lircremote
+- https://github.com/genielabs/mig-homeauto-insteon
+- https://github.com/genielabs/mig-homeauto-w800rf32
+- https://github.com/genielabs/mig-media-v4lcamera
+- https://github.com/genielabs/mig-protocols-mqttbroker
+- https://github.com/genielabs/mig-sbc-weecoboard
 
 ## License
 
