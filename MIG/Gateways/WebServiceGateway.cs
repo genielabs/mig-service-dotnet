@@ -610,7 +610,7 @@ namespace MIG.Gateways
                         // this will only work in Linux (mono)
                         //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                         // this works both on Linux and Windows
-                        response.AddHeader("WWW-Authenticate", "Basic");
+                        //response.AddHeader("WWW-Authenticate", "Basic");
                     }
                 }
                 else
@@ -619,7 +619,7 @@ namespace MIG.Gateways
                     // this will only work in Linux (mono)
                     //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                     // this works both on Linux and Windows
-                    response.AddHeader("WWW-Authenticate", "Basic");
+                    //response.AddHeader("WWW-Authenticate", "Basic");
                 }
                 MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1}{2}", response.StatusCode, request.RawUrl, logExtras)));
             }
@@ -682,6 +682,10 @@ namespace MIG.Gateways
         {
             stopEvent.Reset();
             HttpListener listener = new HttpListener();
+            if (servicePassword != "")
+            {
+                listener.AuthenticationSchemes = AuthenticationSchemes.Basic;
+            }
             foreach (string s in prefixes)
             {
                 listener.Prefixes.Add(s);
