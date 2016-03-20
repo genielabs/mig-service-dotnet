@@ -87,7 +87,7 @@ namespace MIG.Gateways
         public AutoResetEvent ListenForNextRequest { get { return listenForNextRequest; } }
     }
 
-    public class WebServiceGateway : MigGateway, IDisposable
+    public class WebServiceGateway : IMigGateway, IDisposable
     {
         public event PreProcessRequestEventHandler PreProcessRequest;
         public event PostProcessRequestEventHandler PostProcessRequest;

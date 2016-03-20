@@ -26,6 +26,13 @@ using System.Text;
 using System.Threading;
 using System.Linq;
 using System.Globalization;
+using System.IO;
+using System.Xml.Linq;
+using System.Net;
+
+using ICSharpCode.SharpZipLib;
+using ICSharpCode.SharpZipLib.Zip;
+using ICSharpCode.SharpZipLib.Core;
 
 using LibUsbDotNet;
 using LibUsbDotNet.LibUsb;
@@ -36,6 +43,9 @@ using ZWaveLib.CommandClasses;
 
 using MIG.Interfaces.HomeAutomation.Commons;
 using MIG.Config;
+using System.Xml.XPath;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace MIG.Interfaces.HomeAutomation
 {
@@ -117,7 +127,10 @@ namespace MIG.Interfaces.HomeAutomation
             Version_GetAll,
 
             DoorLock_Set,
-            DoorLock_Get
+            DoorLock_Get,
+
+            Db_Update,
+            Db_GetDevice
         }
 
         // Z-Wave specific events
@@ -697,6 +710,19 @@ namespace MIG.Interfaces.HomeAutomation
                         DoorLock.Set(node, mode);
                     }
                     break;
+
+                case Commands.Db_Update:
+                    {
+                        var p1db = new Pepper1Db();
+                        p1db.Update(request.GetOption(0));
+                        break;
+                    }
+                case Commands.Db_GetDevice:
+                    {
+                        var p1db = new Pepper1Db();
+                        returnValue = new ResponseText(p1db.GetDeviceInfo(request.GetOption(0), request.GetOption(1)));
+                        break;
+                    }
                 }
             }
 
@@ -772,6 +798,7 @@ namespace MIG.Interfaces.HomeAutomation
             controller.HealProgress += Controller_HealProgress;
             controller.NodeOperationProgress += Controller_NodeOperationProgress;
             controller.NodeUpdated += Controller_NodeUpdated;
+            Initialize();
         }
 
 
@@ -794,6 +821,15 @@ namespace MIG.Interfaces.HomeAutomation
         }
         */
 
+        private void Initialize()
+        {
+            // Upon start we should check existence of pepper1 database and create it if needed.
+            var p1Db = new Pepper1Db();
+            if (!p1Db.DbExists)
+            {
+                ThreadPool.QueueUserWorkItem((o) => p1Db.Update());
+            }
+        }
 
         private void Controller_ControllerStatusChanged(object sender, ControllerStatusEventArgs args)
         {
@@ -1186,4 +1222,192 @@ namespace MIG.Interfaces.HomeAutomation
 
     }
 
+
+    public class Pepper1Db
+    {
+        private const string dbFilename = "p1db.xml";
+        private const string additionalDbFilename = "additionalZwaveDevices.xml";
+        private const string archiveFilename = "archive.zip";
+        private const string tempFolder = "temp";
+        private const string defaultPepper1Url = "http://pepper1.net/zwavedb/device/export/device_archive.zip";
+
+        public bool DbExists
+        {
+            get
+            {
+                var dbFile = new FileInfo(dbFilename);
+                return dbFile.Exists;
+            }
+        }
+
+        public bool Update(string pepper1Url = defaultPepper1Url)
+        {
+            ZipConstants.DefaultCodePage = System.Text.Encoding.UTF8.CodePage;
+
+            // request archive from P1 db
+            using (var client = new WebClient ()) 
+            {
+                try 
+                {
+                    MigService.Log.Debug("Downloading archive from {0}.", pepper1Url);
+                    client.DownloadFile (pepper1Url, archiveFilename);
+                } 
+                catch (Exception ex) 
+                {
+                    Console.WriteLine (ex.Message);
+                    return false;
+                }
+            }
+
+            // extract archive
+            MigService.Log.Debug ("Extracting archive from '{0}' to '{1}' folder.", archiveFilename, tempFolder);
+            ExtractZipFile(archiveFilename, null, tempFolder);
+
+            MigService.Log.Debug ("Creating consolidated DB.");
+            var p1db = new XDocument();
+            var dbElement = new XElement ("Devices");
+
+            // for each xml file read it content and add to one file
+            var files = Directory.GetFiles(tempFolder, "*.xml");
+            foreach (var file in files)
+            {
+                try
+                {
+                    var fi = new FileInfo (file);
+                    var xDoc = XElement.Load (fi.OpenText ());
+                    dbElement.Add (xDoc.RemoveAllNamespaces());
+                }
+                catch (Exception)
+                {
+                }
+            }
+
+            // Also we need to include some predefined entries from db, distributed with HG
+            // for devices that couldn't be found in pepper1db.
+            // TODO
+
+            p1db.Add (dbElement);
+            var dbFile = new FileInfo (dbFilename);
+            using (var writer = dbFile.CreateText())
+            {
+                p1db.Save (writer);
+            }
+            MigService.Log.Debug ("DB saved: {0}.", dbFilename);
+            return true;
+        }
+
+        /// <summary>
+        /// Searches local pepper1 db for the specified device and returns an array of matched device infos in JSON.
+        /// </summary>
+        /// <returns>The device info.</returns>
+        /// <param name="manufacturerId">Manufacturer identifier.</param>
+        /// <param name="version">Version (in format appVersion.appSubVersion).</param>
+        public string GetDeviceInfo(string manufacturerId, string version)
+        {
+            var res = GetDeviceInfoInDb(dbFilename, manufacturerId, version);
+            // if no devices has been found in pepper1 db, we should try to find them in additional db
+            if (res.Count == 0)
+            {
+                res = GetDeviceInfoInDb(additionalDbFilename, manufacturerId, version);
+            }
+
+            return JsonConvert.SerializeObject(res, Newtonsoft.Json.Formatting.Indented, new []{new XmlNodeConverter()});
+        }
+
+        private List<XElement> GetDeviceInfoInDb(string filename, string manufacturerId, string version)
+        {
+            var dbFile = new FileInfo (filename);
+            XDocument db;
+            using (var reader = dbFile.OpenText ())
+            {
+                db = XDocument.Load(reader);
+            }
+
+            var mIdParts = manufacturerId.Split(new []{':'}, StringSplitOptions.RemoveEmptyEntries);
+            if(mIdParts.Length != 3)
+                throw new ArgumentException(string.Format("Wrong manufacturerId ({0})", manufacturerId));
+
+            var query = string.Format("deviceData/manufacturerId[@value=\"{0}\"] and deviceData/productType[@value=\"{1}\"] and deviceData/productId[@value=\"{2}\"]", mIdParts[0], mIdParts[1], mIdParts[2]);
+            if (!string.IsNullOrEmpty(version))
+            {
+                var vParts = version.Split(new []{'.'}, StringSplitOptions.RemoveEmptyEntries);
+                query += string.Format(" and deviceData/appVersion[@value=\"{0}\"] and deviceData/appSubVersion[@value=\"{1}\"]", vParts[0], vParts[1]);
+            }
+            var baseQuery = string.Format("//ZWaveDevice[ {0} ]", query);
+            var res = db.XPathSelectElements (baseQuery).ToList();
+            MigService.Log.Debug("Found {0} elements in {1} with query {2}", res.Count, filename, baseQuery);
+
+            if (res.Count == 0)
+            {
+                // try to find generic device info without version information
+                query = string.Format("deviceData/manufacturerId[@value=\"{0}\"] and deviceData/productType[@value=\"{1}\"] and deviceData/productId[@value=\"{2}\"]", mIdParts[0], mIdParts[1], mIdParts[2]);
+                baseQuery = string.Format("//ZWaveDevice[ {0} ]", query);
+                res = db.XPathSelectElements (baseQuery).ToList();
+                MigService.Log.Debug("Found {0} elements in {1} with query {2}", res.Count, filename, baseQuery);
+            }
+
+            return res;
+        }
+
+        private static void ExtractZipFile(string archiveFilenameIn, string password, string outFolder)
+        {
+            ZipFile zf = null;
+            try {
+                FileStream fs = File.OpenRead(archiveFilenameIn);
+                zf = new ZipFile(fs);
+                if (!String.IsNullOrEmpty(password)) {
+                    zf.Password = password;     // AES encrypted entries are handled automatically
+                }
+                foreach (ZipEntry zipEntry in zf) {
+                    if (!zipEntry.IsFile) {
+                        continue;           // Ignore directories
+                    }
+                    String entryFileName = zipEntry.Name;
+                    // to remove the folder from the entry:- entryFileName = Path.GetFileName(entryFileName);
+                    // Optionally match entrynames against a selection list here to skip as desired.
+                    // The unpacked length is available in the zipEntry.Size property.
+
+                    byte[] buffer = new byte[4096];     // 4K is optimum
+                    Stream zipStream = zf.GetInputStream(zipEntry);
+
+                    // Manipulate the output filename here as desired.
+                    String fullZipToPath = Path.Combine(outFolder, entryFileName);
+                    string directoryName = Path.GetDirectoryName(fullZipToPath);
+                    if (directoryName.Length > 0)
+                        Directory.CreateDirectory(directoryName);
+
+                    // Unzip file in buffered chunks. This is just as fast as unpacking to a buffer the full size
+                    // of the file, but does not waste memory.
+                    // The "using" will close the stream even if an exception occurs.
+                    using (FileStream streamWriter = File.Create(fullZipToPath)) {
+                        StreamUtils.Copy(zipStream, streamWriter, buffer);
+                    }
+                }
+            } finally {
+                if (zf != null) {
+                    zf.IsStreamOwner = true; // Makes close also shut the underlying stream
+                    zf.Close(); // Ensure we release resources
+                }
+            }
+        }
+    }
+
+    public static class Extensions
+    {
+        public static XElement RemoveAllNamespaces(this XElement xmlDocument)
+        {
+            XElement xElement = new XElement(xmlDocument.Name.LocalName);
+            foreach (XAttribute attribute in xmlDocument.Attributes().Where(x => !x.IsNamespaceDeclaration))
+                xElement.Add(attribute);
+
+            if (!xmlDocument.HasElements)
+            {                
+                xElement.Value = xmlDocument.Value;                
+                return xElement;
+            }
+
+            xElement.Add(xmlDocument.Elements().Select(el => RemoveAllNamespaces(el)));
+            return xElement;
+        }
+    }
 }

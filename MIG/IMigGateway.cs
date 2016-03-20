@@ -30,12 +30,12 @@ namespace MIG
 {
     public static class GatewayExtension
     {
-        public static string GetName(this MigGateway gateway)
+        public static string GetName(this IMigGateway gateway)
         {
             return gateway.GetType().Name;
         }
 
-        public static Option GetOption(this MigGateway gateway, string option)
+        public static Option GetOption(this IMigGateway gateway, string option)
         {
             if (gateway.Options != null)
             {
@@ -44,7 +44,7 @@ namespace MIG
             return null;
         }
 
-        public static void SetOption(this MigGateway gateway, string option, string value)
+        public static void SetOption(this IMigGateway gateway, string option, string value)
         {
             MigService.Log.Debug("{0}: {1}={2}", gateway.GetName(), option, value);
             var opt = gateway.GetOption(option);
@@ -58,7 +58,7 @@ namespace MIG
         }
     }
 
-    public interface MigGateway
+    public interface IMigGateway
     {
         event PreProcessRequestEventHandler PreProcessRequest;
         event PostProcessRequestEventHandler PostProcessRequest;

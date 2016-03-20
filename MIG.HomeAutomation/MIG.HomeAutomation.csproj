@@ -46,6 +46,14 @@
     <Reference Include="XTenLib">
       <HintPath>..\packages\XTenLib.1.0.7\lib\XTenLib.dll</HintPath>
     </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="ZWaveLib">
       <HintPath>..\packages\ZWaveLib.1.0.12\lib\ZWaveLib.dll</HintPath>
     </Reference>

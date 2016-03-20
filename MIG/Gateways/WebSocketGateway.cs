@@ -45,7 +45,7 @@ namespace MIG.Gateways
         }
     }
 
-    public class WebSocketGateway : MigGateway
+    public class WebSocketGateway : IMigGateway
     {
         public event PreProcessRequestEventHandler PreProcessRequest;
         public event PostProcessRequestEventHandler PostProcessRequest;
