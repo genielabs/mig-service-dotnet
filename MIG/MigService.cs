@@ -292,6 +292,10 @@ namespace MIG
                 try
                 {
                     var type = TypeLookup("MIG.Interfaces." + domain, assemblyName);
+                    if(type == null){
+                        MigService.Log.Error("Can't find type for Mig Interface with domain {0} (assemblyName={1})", domain, assemblyName);
+                        return null;
+                    }                        
                     migInterface = (MigInterface)Activator.CreateInstance(type);
                 }
                 catch (Exception e)

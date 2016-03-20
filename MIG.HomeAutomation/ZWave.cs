@@ -798,6 +798,7 @@ namespace MIG.Interfaces.HomeAutomation
             controller.HealProgress += Controller_HealProgress;
             controller.NodeOperationProgress += Controller_NodeOperationProgress;
             controller.NodeUpdated += Controller_NodeUpdated;
+            Initialize();
         }
 
 
@@ -820,6 +821,15 @@ namespace MIG.Interfaces.HomeAutomation
         }
         */
 
+        private void Initialize()
+        {
+            // Upon start we should check existence of pepper1 database and create it if needed.
+            var p1Db = new Pepper1Db();
+            if (!p1Db.DbExists)
+            {
+                ThreadPool.QueueUserWorkItem((o) => p1Db.Update());
+            }
+        }
 
         private void Controller_ControllerStatusChanged(object sender, ControllerStatusEventArgs args)
         {
@@ -1218,8 +1228,18 @@ namespace MIG.Interfaces.HomeAutomation
         private const string dbFilename = "p1db.xml";
         private const string archiveFilename = "archive.zip";
         private const string tempFolder = "temp";
+        private const string defaultPepper1Url = "http://pepper1.net/zwavedb/device/export/device_archive.zip";
 
-        public bool Update(string pepper1Url)
+        public bool DbExists
+        {
+            get
+            {
+                var dbFile = new FileInfo(dbFilename);
+                return dbFile.Exists;
+            }
+        }
+
+        public bool Update(string pepper1Url = defaultPepper1Url)
         {
             ZipConstants.DefaultCodePage = System.Text.Encoding.UTF8.CodePage;
 
@@ -1228,7 +1248,7 @@ namespace MIG.Interfaces.HomeAutomation
             {
                 try 
                 {
-                    Console.WriteLine ("Downloading archive from {0}.", pepper1Url);
+                    MigService.Log.Debug("Downloading archive from {0}.", pepper1Url);
                     client.DownloadFile (pepper1Url, archiveFilename);
                 } 
                 catch (Exception ex) 
@@ -1239,10 +1259,10 @@ namespace MIG.Interfaces.HomeAutomation
             }
 
             // extract archive
-            Console.WriteLine ("Extracting archive from '{0}' to '{1}' folder.", archiveFilename, tempFolder);
+            MigService.Log.Debug ("Extracting archive from '{0}' to '{1}' folder.", archiveFilename, tempFolder);
             ExtractZipFile(archiveFilename, null, tempFolder);
 
-            Console.WriteLine ("Creating consolidated DB.");
+            MigService.Log.Debug ("Creating consolidated DB.");
             var p1db = new XDocument();
             var dbElement = new XElement ("Devices");
 
@@ -1271,7 +1291,7 @@ namespace MIG.Interfaces.HomeAutomation
             {
                 p1db.Save (writer);
             }
-            Console.WriteLine ("DB saved: {0}.", dbFilename);
+            MigService.Log.Debug ("DB saved: {0}.", dbFilename);
             return true;
         }
 
@@ -1302,7 +1322,7 @@ namespace MIG.Interfaces.HomeAutomation
             }
             var baseQuery = string.Format("//ZWaveDevice[ {0} ]", query);
             var res = p1db.XPathSelectElements (baseQuery).ToList();
-            Console.WriteLine("Found {0} elements in p1Db with query {1}", res.Count, baseQuery);
+            MigService.Log.Debug("Found {0} elements in p1Db with query {1}", res.Count, baseQuery);
 
             if (res.Count == 0)
             {
@@ -1310,7 +1330,7 @@ namespace MIG.Interfaces.HomeAutomation
                 query = string.Format("deviceData/manufacturerId[@value=\"{0}\"] and deviceData/productType[@value=\"{1}\"] and deviceData/productId[@value=\"{2}\"]", mIdParts[0], mIdParts[1], mIdParts[2]);
                 baseQuery = string.Format("//ZWaveDevice[ {0} ]", query);
                 res = p1db.XPathSelectElements (baseQuery).ToList();
-                Console.WriteLine("Found {0} elements in p1Db with query {1}", res.Count, baseQuery);
+                MigService.Log.Debug("Found {0} elements in p1Db with query {1}", res.Count, baseQuery);
             }
 
             return JsonConvert.SerializeObject(res, Newtonsoft.Json.Formatting.Indented, new []{new XmlNodeConverter()});
