@@ -1226,6 +1226,7 @@ namespace MIG.Interfaces.HomeAutomation
     public class Pepper1Db
     {
         private const string dbFilename = "p1db.xml";
+        private const string additionalDbFilename = "additionalZwaveDevices.xml";
         private const string archiveFilename = "archive.zip";
         private const string tempFolder = "temp";
         private const string defaultPepper1Url = "http://pepper1.net/zwavedb/device/export/device_archive.zip";
@@ -1303,11 +1304,23 @@ namespace MIG.Interfaces.HomeAutomation
         /// <param name="version">Version (in format appVersion.appSubVersion).</param>
         public string GetDeviceInfo(string manufacturerId, string version)
         {
-            var dbFile = new FileInfo (dbFilename);
-            XDocument p1db;
+            var res = GetDeviceInfoInDb(dbFilename, manufacturerId, version);
+            // if no devices has been found in pepper1 db, we should try to find them in additional db
+            if (res.Count == 0)
+            {
+                res = GetDeviceInfoInDb(additionalDbFilename, manufacturerId, version);
+            }
+
+            return JsonConvert.SerializeObject(res, Newtonsoft.Json.Formatting.Indented, new []{new XmlNodeConverter()});
+        }
+
+        private List<XElement> GetDeviceInfoInDb(string filename, string manufacturerId, string version)
+        {
+            var dbFile = new FileInfo (filename);
+            XDocument db;
             using (var reader = dbFile.OpenText ())
             {
-                p1db = XDocument.Load(reader);
+                db = XDocument.Load(reader);
             }
 
             var mIdParts = manufacturerId.Split(new []{':'}, StringSplitOptions.RemoveEmptyEntries);
@@ -1321,19 +1334,19 @@ namespace MIG.Interfaces.HomeAutomation
                 query += string.Format(" and deviceData/appVersion[@value=\"{0}\"] and deviceData/appSubVersion[@value=\"{1}\"]", vParts[0], vParts[1]);
             }
             var baseQuery = string.Format("//ZWaveDevice[ {0} ]", query);
-            var res = p1db.XPathSelectElements (baseQuery).ToList();
-            MigService.Log.Debug("Found {0} elements in p1Db with query {1}", res.Count, baseQuery);
+            var res = db.XPathSelectElements (baseQuery).ToList();
+            MigService.Log.Debug("Found {0} elements in {1} with query {2}", res.Count, filename, baseQuery);
 
             if (res.Count == 0)
             {
                 // try to find generic device info without version information
                 query = string.Format("deviceData/manufacturerId[@value=\"{0}\"] and deviceData/productType[@value=\"{1}\"] and deviceData/productId[@value=\"{2}\"]", mIdParts[0], mIdParts[1], mIdParts[2]);
                 baseQuery = string.Format("//ZWaveDevice[ {0} ]", query);
-                res = p1db.XPathSelectElements (baseQuery).ToList();
-                MigService.Log.Debug("Found {0} elements in p1Db with query {1}", res.Count, baseQuery);
+                res = db.XPathSelectElements (baseQuery).ToList();
+                MigService.Log.Debug("Found {0} elements in {1} with query {2}", res.Count, filename, baseQuery);
             }
 
-            return JsonConvert.SerializeObject(res, Newtonsoft.Json.Formatting.Indented, new []{new XmlNodeConverter()});
+            return res;
         }
 
         private static void ExtractZipFile(string archiveFilenameIn, string password, string outFolder)
