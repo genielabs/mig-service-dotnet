@@ -266,7 +266,7 @@ namespace MIG.Interfaces.HomeAutomation
 
         public object InterfaceControl(MigInterfaceCommand request)
         {
-            object returnValue = "OK";
+            ResponseText returnValue = new ResponseText("OK");
             bool raiseEvent = false;
             string eventParameter = ModuleEvents.Status_Level;
             string eventValue = "";
@@ -325,7 +325,7 @@ namespace MIG.Interfaces.HomeAutomation
                         Thread.Sleep(500);
                     }
                     controller.StopNodeAdd();
-                    returnValue = lastAddedNode.ToString();
+                    returnValue = new ResponseText(lastAddedNode.ToString());
                     break;
 
                 case Commands.Controller_NodeRemove:
@@ -340,7 +340,7 @@ namespace MIG.Interfaces.HomeAutomation
                         Thread.Sleep(500);
                     }
                     controller.StopNodeRemove();
-                    returnValue = lastRemovedNode.ToString();
+                    returnValue = new ResponseText(lastRemovedNode.ToString());
                     break;
 
                 case Commands.Basic_Set:
@@ -533,7 +533,7 @@ namespace MIG.Interfaces.HomeAutomation
                     break;
 
                 case Commands.WakeUp_GetAlwaysAwake:
-                    returnValue = WakeUp.GetAlwaysAwake(node) ? "1" : "0";
+                    returnValue = new ResponseText(WakeUp.GetAlwaysAwake(node) ? "1" : "0");
                     break;
 
                 case Commands.WakeUp_SetAlwaysAwake:
@@ -541,7 +541,7 @@ namespace MIG.Interfaces.HomeAutomation
                     break;
 
                 case Commands.Version_Get:
-                    returnValue = "ERROR";
+                    returnValue = new ResponseText("ERROR");
                     CommandClass cclass;
                     Enum.TryParse<CommandClass>(request.GetOption(0), out cclass);
                     if (cclass != CommandClass.NotSet)
@@ -549,7 +549,7 @@ namespace MIG.Interfaces.HomeAutomation
                         var nodeCclass = node.GetCommandClass(cclass);
                         if (nodeCclass != null && nodeCclass.Version != 0)
                         {
-                            returnValue = nodeCclass.Version.ToString();
+                            returnValue = new ResponseText(nodeCclass.Version.ToString());
                         }
                         else
                         {
@@ -720,7 +720,7 @@ namespace MIG.Interfaces.HomeAutomation
                 case Commands.Db_GetDevice:
                     {
                         var p1db = new Pepper1Db();
-                        returnValue = p1db.GetDeviceInfo(request.GetOption(0), request.GetOption(1));
+                        returnValue = new ResponseText(p1db.GetDeviceInfo(request.GetOption(0), request.GetOption(1)));
                         break;
                     }
                 }
@@ -1107,7 +1107,7 @@ namespace MIG.Interfaces.HomeAutomation
                     if (eventValue is NodeVersion)
                     {
                         eventPath = "ZWaveNode.VersionReport";
-                        eventValue = eventValue as NodeVersion;
+                        eventValue = (eventValue as NodeVersion).ToString();
                     }
                     else
                     {
@@ -1126,14 +1126,14 @@ namespace MIG.Interfaces.HomeAutomation
             }
         }
 
-        private object GetResponseValue(byte nodeNumber, string eventPath)
+        private ResponseText GetResponseValue(byte nodeNumber, string eventPath)
         {
-            object returnValue = null;
+            ResponseText returnValue = new ResponseText("ERR_TIMEOUT");
             InterfacePropertyChangedEventHandler eventHandler = new InterfacePropertyChangedEventHandler((sender, property) =>
             {
                 if (property.EventData.Source == nodeNumber.ToString() && property.EventData.Property == eventPath)
                 {
-                    returnValue = property.EventData.Value;
+                    returnValue = new ResponseText(property.EventData.Value.ToString());
                 }
             });
             InterfacePropertyChanged += eventHandler;
@@ -1141,7 +1141,7 @@ namespace MIG.Interfaces.HomeAutomation
             {
                 int timeout = 0;
                 int delay = 100;
-                while (returnValue == null && timeout < ZWaveMessage.SendMessageTimeoutMs / delay)
+                while (returnValue.ResponseValue == "ERR_TIMEOUT" && timeout < ZWaveMessage.SendMessageTimeoutMs / delay)
                 {
                     Thread.Sleep(delay);
                     timeout++;
@@ -1150,7 +1150,7 @@ namespace MIG.Interfaces.HomeAutomation
             t.Start();
             t.Join(ZWaveMessage.SendMessageTimeoutMs);
             InterfacePropertyChanged -= eventHandler;
-            return returnValue ?? "ERR_TIMEOUT";
+            return returnValue;
         }
 
         private string GetIndexedParameterPath(string basePath, int parameterId)
