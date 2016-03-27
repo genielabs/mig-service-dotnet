@@ -1316,7 +1316,10 @@ namespace MIG.Interfaces.HomeAutomation
 
         private List<XElement> GetDeviceInfoInDb(string filename, string manufacturerId, string version)
         {
+            var res = new List<XElement>();
             var dbFile = new FileInfo (filename);
+            if (!dbFile.Exists)
+                return res;
             XDocument db;
             using (var reader = dbFile.OpenText ())
             {
@@ -1334,7 +1337,7 @@ namespace MIG.Interfaces.HomeAutomation
                 query += string.Format(" and deviceData/appVersion[@value=\"{0}\"] and deviceData/appSubVersion[@value=\"{1}\"]", vParts[0], vParts[1]);
             }
             var baseQuery = string.Format("//ZWaveDevice[ {0} ]", query);
-            var res = db.XPathSelectElements (baseQuery).ToList();
+            res = db.XPathSelectElements (baseQuery).ToList();
             MigService.Log.Debug("Found {0} elements in {1} with query {2}", res.Count, filename, baseQuery);
 
             if (res.Count == 0)
