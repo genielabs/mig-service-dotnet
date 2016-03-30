@@ -1226,7 +1226,7 @@ namespace MIG.Interfaces.HomeAutomation
     public class Pepper1Db
     {
         private const string dbFilename = "p1db.xml";
-        private const string additionalDbFilename = "additionalZwaveDevices.xml";
+        private const string additionalDbFilename = "p1db_custom.xml";
         private const string archiveFilename = "archive.zip";
         private const string tempFolder = "temp";
         private const string defaultPepper1Url = "http://pepper1.net/zwavedb/device/export/device_archive.zip";
@@ -1235,7 +1235,7 @@ namespace MIG.Interfaces.HomeAutomation
         {
             get
             {
-                var dbFile = new FileInfo(dbFilename);
+                var dbFile = new FileInfo(GetDbFullPath(dbFilename));
                 return dbFile.Exists;
             }
         }
@@ -1282,12 +1282,8 @@ namespace MIG.Interfaces.HomeAutomation
                 }
             }
 
-            // Also we need to include some predefined entries from db, distributed with HG
-            // for devices that couldn't be found in pepper1db.
-            // TODO
-
             p1db.Add (dbElement);
-            var dbFile = new FileInfo (dbFilename);
+            var dbFile = new FileInfo (GetDbFullPath(dbFilename));
             using (var writer = dbFile.CreateText())
             {
                 p1db.Save (writer);
@@ -1316,7 +1312,10 @@ namespace MIG.Interfaces.HomeAutomation
 
         private List<XElement> GetDeviceInfoInDb(string filename, string manufacturerId, string version)
         {
-            var dbFile = new FileInfo (filename);
+            var res = new List<XElement>();
+            var dbFile = new FileInfo (GetDbFullPath(filename));
+            if (!dbFile.Exists)
+                return res;
             XDocument db;
             using (var reader = dbFile.OpenText ())
             {
@@ -1334,7 +1333,7 @@ namespace MIG.Interfaces.HomeAutomation
                 query += string.Format(" and deviceData/appVersion[@value=\"{0}\"] and deviceData/appSubVersion[@value=\"{1}\"]", vParts[0], vParts[1]);
             }
             var baseQuery = string.Format("//ZWaveDevice[ {0} ]", query);
-            var res = db.XPathSelectElements (baseQuery).ToList();
+            res = db.XPathSelectElements (baseQuery).ToList();
             MigService.Log.Debug("Found {0} elements in {1} with query {2}", res.Count, filename, baseQuery);
 
             if (res.Count == 0)
@@ -1347,6 +1346,13 @@ namespace MIG.Interfaces.HomeAutomation
             }
 
             return res;
+        }
+
+        private static string GetDbFullPath(string file)
+        {
+            string assemblyFolder = Path.GetDirectoryName(typeof(Pepper1Db).Assembly.Location);
+            string path = Path.Combine(assemblyFolder, file);
+            return path;
         }
 
         private static void ExtractZipFile(string archiveFilenameIn, string password, string outFolder)
