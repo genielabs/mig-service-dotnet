@@ -473,7 +473,8 @@ namespace MIG.Gateways
                                             {
                                                 // TODO: !IMPORTANT! exclude from caching files that contains SSI tags!
                                                 response.StatusCode = (int)HttpStatusCode.NotModified;
-                                                response.Headers.Set(HttpResponseHeader.Date, file.LastWriteTimeUtc.ToString().Replace(",", "."));
+                                                //!!DISABLED!! - The following line was preventing browser to load file from cache
+                                                //response.Headers.Set(HttpResponseHeader.Date, file.LastWriteTimeUtc.ToString().Replace(",", "."));
                                             }
                                             else
                                             {
