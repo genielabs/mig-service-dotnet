@@ -443,13 +443,30 @@ namespace MIG.Gateways
                                             {
                                                 response.ContentType = "image/gif";
                                             }
+                                            else if (url.ToLower().EndsWith(".svg"))
+                                            {
+                                                response.ContentType = "image/svg+xml";
+                                            }
                                             else if (url.ToLower().EndsWith(".mp3"))
                                             {
                                                 response.ContentType = "audio/mp3";
                                             }
+                                            else if (url.ToLower().EndsWith(".wav"))
+                                            {
+                                                response.ContentType = "audio/x-wav";
+                                            }
                                             else if (url.ToLower().EndsWith(".appcache"))
                                             {
                                                 response.ContentType = "text/cache-manifest";
+                                            }
+                                            else if (url.ToLower().EndsWith(".otf") || url.ToLower().EndsWith(".ttf") || url.ToLower().EndsWith(".woff") || url.ToLower().EndsWith(".woff2"))
+                                            {
+                                                response.ContentType = "application/octet-stream";
+                                            }
+                                            else if (url.ToLower().EndsWith(".xml"))
+                                            {
+                                                response.ContentType = "text/xml";
+                                                isText = true;
                                             }
                                             else
                                             {
