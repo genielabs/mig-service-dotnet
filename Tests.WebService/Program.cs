@@ -50,7 +50,7 @@ namespace Tests.WebService
 
             // Enable some interfaces for testing...
 
-            /*
+            /*            
             var zwave = migService.AddInterface("HomeAutomation.ZWave", "MIG.HomeAutomation.dll");
             zwave.SetOption("Port", "/dev/ttyUSB0");
             migService.EnableInterface("HomeAutomation.ZWave");
