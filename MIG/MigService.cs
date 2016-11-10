@@ -304,7 +304,8 @@ namespace MIG
                 }
                 if (migInterface != null)
                 {
-                    Log.Debug("Adding Interface {0}", migInterface.GetDomain());
+                    var interfaceVersion = VersionLookup(assemblyName);
+                    Log.Debug("Adding Interface {0} Version: {1}", migInterface.GetDomain(), interfaceVersion);
                     Interfaces.Add(migInterface);
                     migInterface.InterfaceModulesChanged += MigService_InterfaceModulesChanged;
                     migInterface.InterfacePropertyChanged += MigService_InterfacePropertyChanged;
@@ -507,6 +508,37 @@ namespace MIG
                 type = Type.GetType(typeName);
             }
             return type;
+        }
+
+        public static Version VersionLookup(string assemblyName)
+        {
+
+            if (string.IsNullOrWhiteSpace(assemblyName)) return null;
+
+            Assembly assembly;
+            try
+            {
+                assembly = AppDomain.CurrentDomain.Load(Path.GetFileNameWithoutExtension(assemblyName));
+            }
+            catch
+            {
+                try
+                {
+                    assembly = Assembly.LoadFrom(Path.Combine("lib", "mig", assemblyName));
+                }
+                catch
+                {
+                    try
+                    {
+                        assembly = Assembly.LoadFrom(Path.Combine("lib", assemblyName));
+                    }
+                    catch
+                    {
+                        assembly = Assembly.LoadFrom(Path.Combine(assemblyName));
+                    }
+                }
+            }
+            return assembly?.GetName().Version;
         }
 
         public static string GetAssemblyDirectory(Assembly assembly)
