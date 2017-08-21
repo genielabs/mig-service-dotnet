@@ -62,6 +62,12 @@ namespace MIG.Interfaces.HomeAutomation.Commons
             "Sensor.Luminance";
         public static string Sensor_Humidity =
             "Sensor.Humidity";
+        public static string Sensor_WaterFlow =
+            "Sensor.WaterFlow";
+        public static string Sensor_WaterPressure =
+            "Sensor.WaterPressure";
+        public static string Sensor_Ultraviolet =
+            "Sensor.Ultraviolet";
         public static string Sensor_DoorWindow =
             "Sensor.DoorWindow";
         public static string Sensor_Key =

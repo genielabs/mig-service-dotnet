@@ -46,6 +46,8 @@ using MIG.Config;
 using System.Xml.XPath;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
 
 namespace MIG.Interfaces.HomeAutomation
 {
@@ -976,6 +978,15 @@ namespace MIG.Interfaces.HomeAutomation
                 case EventParameter.SensorMotion:
                     eventPath = ModuleEvents.Sensor_MotionDetect;
                     break;
+                case EventParameter.WaterFlow:
+                    eventPath = ModuleEvents.Sensor_WaterFlow;
+                    break;
+                case EventParameter.WaterPressure:
+                    eventPath = ModuleEvents.Sensor_WaterPressure;
+                    break;
+                case EventParameter.Ultraviolet:
+                    eventPath = ModuleEvents.Sensor_Ultraviolet;
+                    break;
                 case EventParameter.AlarmGeneric:
                     eventPath = ModuleEvents.Sensor_Alarm;
                     // Translate generic alarm into specific Door Lock event values if node is an entry control type device
@@ -1235,7 +1246,7 @@ namespace MIG.Interfaces.HomeAutomation
         private const string additionalDbFilename = "p1db_custom.xml";
         private const string archiveFilename = "archive.zip";
         private const string tempFolder = "temp";
-        private const string defaultPepper1Url = "http://pepper1.net/zwavedb/device/export/device_archive.zip";
+        private const string defaultPepper1Url = "https://genielabs.github.io/HomeGenie/_hg_files/zwave/pepper1_device_archive.zip";
 
         public bool DbExists
         {
