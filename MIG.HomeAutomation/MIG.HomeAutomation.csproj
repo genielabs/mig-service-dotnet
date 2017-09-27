@@ -54,7 +54,7 @@
     <Reference Include="SerialPortLib">
       <HintPath>..\packages\SerialPortLib.1.0.12\lib\SerialPortLib.dll</HintPath>
     </Reference>
-    <Reference Include="ZWaveLib">
+    <Reference Include="ZWaveLib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
       <HintPath>..\packages\ZWaveLib.1.0.15\lib\ZWaveLib.dll</HintPath>
     </Reference>
   </ItemGroup>

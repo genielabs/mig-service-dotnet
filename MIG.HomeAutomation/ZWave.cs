@@ -22,22 +22,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Linq;
 using System.Globalization;
 using System.IO;
 using System.Xml.Linq;
 using System.Net;
-
-using ICSharpCode.SharpZipLib;
 using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.Core;
-
-using LibUsbDotNet;
-using LibUsbDotNet.LibUsb;
-using LibUsbDotNet.Main;
-
 using ZWaveLib;
 using ZWaveLib.CommandClasses;
 
@@ -46,8 +38,6 @@ using MIG.Config;
 using System.Xml.XPath;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using System.Security.Cryptography.X509Certificates;
-using System.Net.Security;
 
 namespace MIG.Interfaces.HomeAutomation
 {
@@ -165,6 +155,10 @@ namespace MIG.Interfaces.HomeAutomation
 
         #region Private fields
 
+        private const int NumberOfAddAttempts = 60;
+        private const int NumberOfRemoveAttempts = 60;
+        private const int DelayBetweenAttempts = 500;
+        
         private ZWaveController controller;
 
         private byte lastRemovedNode = 0;
@@ -320,13 +314,13 @@ namespace MIG.Interfaces.HomeAutomation
                 case Commands.Controller_NodeAdd:
                     lastAddedNode = 0;
                     controller.BeginNodeAdd();
-                    for (int i = 0; i < 20; i++)
+                    for (int i = 0; i < NumberOfAddAttempts; i++)
                     {
                         if (lastAddedNode > 0)
                         {
                             break;
                         }
-                        Thread.Sleep(500);
+                        Thread.Sleep(DelayBetweenAttempts);
                     }
                     controller.StopNodeAdd();
                     returnValue = new ResponseText(lastAddedNode.ToString());
@@ -335,13 +329,13 @@ namespace MIG.Interfaces.HomeAutomation
                 case Commands.Controller_NodeRemove:
                     lastRemovedNode = 0;
                     controller.BeginNodeRemove();
-                    for (int i = 0; i < 20; i++)
+                    for (int i = 0; i < NumberOfRemoveAttempts; i++)
                     {
                         if (lastRemovedNode > 0)
                         {
                             break;
                         }
-                        Thread.Sleep(500);
+                        Thread.Sleep(DelayBetweenAttempts);
                     }
                     controller.StopNodeRemove();
                     returnValue = new ResponseText(lastRemovedNode.ToString());
