@@ -59,8 +59,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Pepper1Db.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="X10.cs" />
+    <Compile Include="XElementExtensions.cs" />
     <Compile Include="ZWave.cs" />
     <Compile Include="ModuleEvents.cs" />
   </ItemGroup>
