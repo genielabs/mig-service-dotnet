@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Linq;
 
-
 namespace MIG.Utility
 {
     //
