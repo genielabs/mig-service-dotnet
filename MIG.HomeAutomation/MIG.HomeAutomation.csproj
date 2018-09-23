@@ -52,7 +52,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="SerialPortLib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
-      <HintPath>..\packages\SerialPortLib.1.0.15\lib\SerialPortLib.dll</HintPath>
+      <HintPath>..\packages\SerialPortLib.1.0.16\lib\SerialPortLib.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -69,11 +69,11 @@
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Net" />
     <Reference Include="XTenLib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
-      <HintPath>..\packages\XTenLib.1.0.9\lib\XTenLib.dll</HintPath>
+      <HintPath>..\packages\XTenLib.1.0.10\lib\XTenLib.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="ZWaveLib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
-      <HintPath>..\packages\ZWaveLib.1.0.16\lib\ZWaveLib.dll</HintPath>
+      <HintPath>..\packages\ZWaveLib.1.0.17\lib\ZWaveLib.dll</HintPath>
       <Private>True</Private>
     </Reference>
   </ItemGroup>
