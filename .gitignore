@@ -10,8 +10,9 @@
 *.suo
 *.pidb
 Thumbs.db
+.idea
 
 # Nuget packages
-packages/*
+packages
 !packages/repositories.config
 
