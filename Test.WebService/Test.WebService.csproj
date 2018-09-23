@@ -7,8 +7,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{E4CB8D80-39EC-4347-8FA1-292904B13AD0}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Tests.WebService</RootNamespace>
-    <AssemblyName>Tests.WebService</AssemblyName>
+    <RootNamespace>Test.WebService</RootNamespace>
+    <AssemblyName>Test.WebService</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <ReleaseVersion>1.0</ReleaseVersion>
   </PropertyGroup>

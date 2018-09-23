@@ -6,7 +6,7 @@ using System.Xml.Serialization;
 using MIG;
 using MIG.Config;
 
-namespace Tests.WebService
+namespace Test.WebService
 {
     class MainClass
     {

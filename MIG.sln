@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MIG", "MIG\MIG.csproj", "{005357C9-7F8E-458E-AFFA-BF84F7D6A6AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests.WebService", "Tests.WebService\Tests.WebService.csproj", "{E4CB8D80-39EC-4347-8FA1-292904B13AD0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.WebService", "Test.WebService\Test.WebService.csproj", "{E4CB8D80-39EC-4347-8FA1-292904B13AD0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MIG.HomeAutomation", "MIG.HomeAutomation\MIG.HomeAutomation.csproj", "{8C90AAEE-6245-4F6F-9D4A-854300C662F6}"
 EndProject
