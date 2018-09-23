@@ -1,3 +1,6 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/6genehqw9wtuuxkl?svg=true)](https://ci.appveyor.com/project/genemars/mig-service-dotnet)
+[![NuGet](https://img.shields.io/nuget/v/MIG.svg)](https://www.nuget.org/packages/MIG/)
+
 ﻿# MIG libray for .Net/Mono
 
 MIG is a .Net library providing an integrated solution for developing networked applications and real time web applications.
