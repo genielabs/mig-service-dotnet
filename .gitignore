@@ -16,3 +16,5 @@ Thumbs.db
 packages
 !packages/repositories.config
 
+# IDEs
+.idea

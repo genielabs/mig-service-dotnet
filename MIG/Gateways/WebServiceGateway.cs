@@ -34,13 +34,10 @@ using System.Security.Cryptography.X509Certificates;
 using System.Web;
 
 using Ude;
-using Ude.Core;
-
 using CommonMark;
 
 using MIG.Config;
 using System.Diagnostics;
-using System.Net.Sockets;
 using System.Net.NetworkInformation;
 
 namespace MIG.Gateways
@@ -171,8 +168,8 @@ namespace MIG.Gateways
         {
             MigService.Log.Debug("Starting Gateway {0}", this.GetName());
             bool success = false;
-            string[] bindingPrefixes = new string[1] { 
-                String.Format(@"http://{0}:{1}/", serviceHost, servicePort)
+            string[] bindingPrefixes = new string[1] {
+                $@"http://{serviceHost}:{servicePort}/"
             };
             try
             {
@@ -223,8 +220,10 @@ namespace MIG.Gateways
                 if (request.IsSecureConnection)
                 {
                     var clientCertificate = request.GetClientCertificate();
-                    X509Chain chain = new X509Chain();
-                    chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                    var chain = new X509Chain
+                    {
+                        ChainPolicy = {RevocationMode = X509RevocationMode.NoCheck}
+                    };
                     chain.Build(clientCertificate);
                     if (chain.ChainStatus.Length != 0)
                     {
@@ -238,11 +237,11 @@ namespace MIG.Gateways
                 response.Headers.Set(HttpResponseHeader.Server, "MIG WebService Gateway");
                 response.KeepAlive = false;
                 //
-                bool isAuthenticated = (request.Headers["Authorization"] != null);
+                bool requestHasAuthorizationHeader = request.Headers["Authorization"] != null;
                 string remoteAddress = request.RemoteEndPoint.Address.ToString();
                 string logExtras = "";
                 //
-                if (servicePassword == "" || isAuthenticated) //request.IsAuthenticated)
+                if (servicePassword == "" || requestHasAuthorizationHeader) //request.IsAuthenticated)
                 {
                     bool verified = false;
                     //
@@ -255,20 +254,20 @@ namespace MIG.Gateways
                     //
                     //HttpListenerBasicIdentity identity = null;
                     //
-                    if (isAuthenticated)
+                    if (requestHasAuthorizationHeader)
                     {
                         //identity = (HttpListenerBasicIdentity)context.User.Identity;
                         // authuser = identity.Name;
                         // authpass = identity.Password;
-                        byte[] encodedDataAsBytes = System.Convert.FromBase64String(request.Headers["Authorization"].Split(' ')[1]);
-                        string authtoken = System.Text.Encoding.UTF8.GetString(encodedDataAsBytes);
+                        byte[] encodedDataAsBytes = Convert.FromBase64String(request.Headers["Authorization"].Split(' ')[1]);
+                        string authtoken = Encoding.UTF8.GetString(encodedDataAsBytes);
                         authUser = authtoken.Split(':')[0];
                         authPass = authtoken.Split(':')[1];
                     }
                     //
                     //TODO: complete authorization (for now with one fixed user 'admin', add multiuser support)
                     //
-                    if (servicePassword == "" || (authUser == serviceUsername && Utility.Encryption.SHA1.GenerateHashString(authPass) == servicePassword))
+                    if (servicePassword == "" || authUser == serviceUsername && Utility.Encryption.SHA1.GenerateHashString(authPass) == servicePassword)
                     {
                         verified = true;
                     }
@@ -292,93 +291,12 @@ namespace MIG.Gateways
                         else
                         {
                             var connectionWatch = Stopwatch.StartNew();
-                            MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1} [OPEN]", response.StatusCode, request.RawUrl)));
+                            MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod,
+                                $"{response.StatusCode} {request.RawUrl} [OPEN]"));
                             // this url is reserved for Server Sent Event stream
                             if (url.TrimEnd('/').Equals("events"))
                             {
-                                // TODO: move all of this to a separate function
-                                // Server sent events
-                                // NOTE: no PreProcess or PostProcess events are fired in this case
-                                //response.KeepAlive = true;
-                                response.ContentEncoding = Encoding.UTF8;
-                                response.ContentType = "text/event-stream";
-                                response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache, no-store, must-revalidate");
-                                response.Headers.Set(HttpResponseHeader.Pragma, "no-cache");
-                                response.Headers.Set("Access-Control-Allow-Origin", "*");
-
-                                // 2K padding for IE
-                                var padding = ":" + new String(' ', 2048) + "\n";
-                                byte[] paddingData = System.Text.Encoding.UTF8.GetBytes(padding);
-                                response.OutputStream.Write(paddingData, 0, paddingData.Length);
-                                byte[] retryData = System.Text.Encoding.UTF8.GetBytes("retry: 1000\n");
-                                response.OutputStream.Write(retryData, 0, retryData.Length);
-
-                                DateTime lastTimeStamp = DateTime.UtcNow;
-                                var lastId = context.Request.Headers.Get("Last-Event-ID");
-                                if (lastId == null || lastId == "")
-                                {
-                                    var queryValues = HttpUtility.ParseQueryString(context.Request.Url.Query);
-                                    lastId = queryValues.Get("lastEventId");
-
-                                }
-
-                                if (lastId != null && lastId != "")
-                                {
-                                    double unixTimestamp = 0;
-                                    double.TryParse(lastId, NumberStyles.Float | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out unixTimestamp);
-                                    if (unixTimestamp != 0)
-                                    {
-                                        lastTimeStamp = new DateTime(1970,1,1,0,0,0,0,System.DateTimeKind.Utc);
-                                        lastTimeStamp.AddSeconds(Math.Round(unixTimestamp / 1000d));
-                                    }
-                                }
-
-                                bool connected = true;
-                                var timeoutWatch =  Stopwatch.StartNew();
-                                while (connected)
-                                {
-                                    // dirty work around for signaling new event and 
-                                    // avoiding locks on long socket timetout
-                                    lock (sseEventToken)
-                                        Monitor.Wait(sseEventToken, 1000);
-                                    // safely dequeue events
-                                    List<SseEvent> bufferedData;
-                                    do
-                                    {
-                                        bufferedData = sseEventBuffer.FindAll(le => le != null && le.Timestamp.Ticks > lastTimeStamp.Ticks);
-                                        if (bufferedData.Count > 0)
-                                        {
-                                            foreach (SseEvent entry in bufferedData)
-                                            {
-                                                // send events
-                                                try
-                                                {
-                                                    // The following throws an error on some mono-arm (Input string was not in the correct format)
-                                                    // entry.Event.UnixTimestamp.ToString("R", CultureInfo.InvariantCulture)
-                                                    byte[] data = System.Text.Encoding.UTF8.GetBytes("id: " + entry.Event.UnixTimestamp.ToString().Replace(",", ".") + "\ndata: " + MigService.JsonSerialize(entry.Event) + "\n\n");
-                                                    response.OutputStream.Write(data, 0, data.Length);
-                                                    //response.OutputStream.Flush();
-                                                    lastTimeStamp = entry.Timestamp;
-                                                }
-                                                catch (Exception e) 
-                                                {
-                                                    MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1} [ERROR: {2}]", response.StatusCode, request.RawUrl, e.Message)));
-                                                    connected = false;
-                                                    break;
-                                                }
-                                            }
-                                            Thread.Sleep(100);
-                                        }
-                                        // there might be new data after sending
-                                    } while (connected && bufferedData.Count > 0);
-                                    // check if the remote end point is still alive every 15 seconds or so
-                                    if (timeoutWatch.Elapsed.TotalSeconds > 15)
-                                    {
-                                        connected = connected && IsRemoteEndPointConnected(request.RemoteEndPoint);
-                                        timeoutWatch.Stop();
-                                        timeoutWatch = Stopwatch.StartNew();
-                                    }
-                                }
+                                HandleEventsRoute(request, response, context, remoteAddress);
                             }
                             else
                             {
@@ -401,7 +319,7 @@ namespace MIG.Gateways
 
                                     OnPreProcessRequest(migRequest);
 
-                                    bool requestHandled = (migRequest != null && migRequest.Handled);
+                                    bool requestHandled = migRequest != null && migRequest.Handled;
                                     if (requestHandled)
                                     {
                                         SendResponseObject(context, migRequest.ResponseData);
@@ -410,7 +328,7 @@ namespace MIG.Gateways
                                     {
                                         // If request begins <base_url>, process as standard Web request
                                         string requestedFile = GetWebFilePath(url);
-                                        if (!System.IO.File.Exists(requestedFile))
+                                        if (!File.Exists(requestedFile))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.NotFound;
                                             WebServiceUtility.WriteStringToContext(context, "<h1>404 - Not Found</h1>");
@@ -475,7 +393,7 @@ namespace MIG.Gateways
                                                 isText = true;
                                             }
 
-                                            var file = new System.IO.FileInfo(requestedFile);
+                                            var file = new FileInfo(requestedFile);
                                             response.ContentLength64 = file.Length;
 
                                             bool modified = true;
@@ -523,7 +441,7 @@ namespace MIG.Gateways
                                                             if (requestedFile.EndsWith(".md"))
                                                             {
                                                                 // Built-in Markdown files support
-                                                                body = CommonMark.CommonMarkConverter.Convert(body);
+                                                                body = CommonMarkConverter.Convert(body);
                                                                 // TODO: add a way to include HTML header and footer template to be appended to the
                                                                 // TODO: translated markdown text
                                                             }
@@ -555,7 +473,7 @@ namespace MIG.Gateways
                                                                                     Encoding fileEncoding = DetectWebFileEncoding(fileName);
                                                                                     if (fileEncoding == null)
                                                                                         fileEncoding = defaultWebFileEncoding;
-                                                                                    var incFile = System.IO.File.ReadAllText(fileName, fileEncoding) + rs;
+                                                                                    var incFile = File.ReadAllText(fileName, fileEncoding) + rs;
                                                                                     body = ls + incFile;
                                                                                 }
                                                                             }
@@ -593,7 +511,7 @@ namespace MIG.Gateways
                                                 }
                                                 else
                                                 {
-                                                    WebServiceUtility.WriteBytesToContext(context, System.IO.File.ReadAllBytes(requestedFile));
+                                                    WebServiceUtility.WriteBytesToContext(context, File.ReadAllBytes(requestedFile));
                                                 }
                                             }
                                         }
@@ -629,7 +547,7 @@ namespace MIG.Gateways
                         // this will only work in Linux (mono)
                         //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                         // this works both on Linux and Windows
-                        //response.AddHeader("WWW-Authenticate", "Basic");
+                        response.AddHeader("WWW-Authenticate", "Basic realm=\"User Visible Realm\"");
                     }
                 }
                 else
@@ -638,9 +556,10 @@ namespace MIG.Gateways
                     // this will only work in Linux (mono)
                     //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                     // this works both on Linux and Windows
-                    //response.AddHeader("WWW-Authenticate", "Basic");
+                    response.AddHeader("WWW-Authenticate", "Basic realm=\"User Visible Realm\"");
                 }
-                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod.ToString(), String.Format("{0} {1}{2}", response.StatusCode, request.RawUrl, logExtras)));
+                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod,
+                    $"{response.StatusCode} {request.RawUrl}{logExtras}"));
             }
             catch (Exception ex)
             {
@@ -666,6 +585,99 @@ namespace MIG.Gateways
             }
         }
 
+        private void HandleEventsRoute(HttpListenerRequest request, HttpListenerResponse response, HttpListenerContext context,
+            string remoteAddress)
+        {
+            // Server sent events
+            // NOTE: no PreProcess or PostProcess events are fired in this case
+            //response.KeepAlive = true;
+            response.ContentEncoding = Encoding.UTF8;
+            response.ContentType = "text/event-stream";
+            response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache, no-store, must-revalidate");
+            response.Headers.Set(HttpResponseHeader.Pragma, "no-cache");
+            response.Headers.Set("Access-Control-Allow-Origin", "*");
+
+            // 2K padding for IE
+            var padding = ":" + new String(' ', 2048) + "\n";
+            byte[] paddingData = Encoding.UTF8.GetBytes(padding);
+            response.OutputStream.Write(paddingData, 0, paddingData.Length);
+            byte[] retryData = Encoding.UTF8.GetBytes("retry: 1000\n");
+            response.OutputStream.Write(retryData, 0, retryData.Length);
+
+            DateTime lastTimeStamp = DateTime.UtcNow;
+            var lastId = context.Request.Headers.Get("Last-Event-ID");
+            if (lastId == null || lastId == "")
+            {
+                var queryValues = HttpUtility.ParseQueryString(context.Request.Url.Query);
+                lastId = queryValues.Get("lastEventId");
+
+            }
+
+            if (lastId != null && lastId != "")
+            {
+                double unixTimestamp = 0;
+                double.TryParse(lastId, NumberStyles.Float | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture,
+                    out unixTimestamp);
+                if (unixTimestamp != 0)
+                {
+                    lastTimeStamp = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+                    lastTimeStamp.AddSeconds(Math.Round(unixTimestamp / 1000d));
+                }
+            }
+
+            bool connected = true;
+            var timeoutWatch = Stopwatch.StartNew();
+            while (connected)
+            {
+                // dirty work around for signaling new event and 
+                // avoiding locks on long socket timetout
+                lock (sseEventToken)
+                    Monitor.Wait(sseEventToken, 1000);
+                // safely dequeue events
+                List<SseEvent> bufferedData;
+                do
+                {
+                    bufferedData = sseEventBuffer.FindAll(le => le != null && le.Timestamp.Ticks > lastTimeStamp.Ticks);
+                    if (bufferedData.Count > 0)
+                    {
+                        foreach (SseEvent entry in bufferedData)
+                        {
+                            // send events
+                            try
+                            {
+                                // The following throws an error on some mono-arm (Input string was not in the correct format)
+                                // entry.Event.UnixTimestamp.ToString("R", CultureInfo.InvariantCulture)
+                                byte[] data = Encoding.UTF8.GetBytes("id: " + entry.Event.UnixTimestamp.ToString().Replace(",", ".") +
+                                                                     "\ndata: " + MigService.JsonSerialize(entry.Event) + "\n\n");
+                                response.OutputStream.Write(data, 0, data.Length);
+                                //response.OutputStream.Flush();
+                                lastTimeStamp = entry.Timestamp;
+                            }
+                            catch (Exception e)
+                            {
+                                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod,
+                                    $"{response.StatusCode} {request.RawUrl} [ERROR: {e.Message}]"));
+                                connected = false;
+                                break;
+                            }
+                        }
+
+                        Thread.Sleep(100);
+                    }
+
+                    // there might be new data after sending
+                } while (connected && bufferedData.Count > 0);
+
+                // check if the remote end point is still alive every 15 seconds or so
+                if (timeoutWatch.Elapsed.TotalSeconds > 15)
+                {
+                    connected = connected && IsRemoteEndPointConnected(request.RemoteEndPoint);
+                    timeoutWatch.Stop();
+                    timeoutWatch = Stopwatch.StartNew();
+                }
+            }
+        }
+
         #region Client Connection management
 
         private void SendResponseObject(HttpListenerContext context, object responseObject)
@@ -682,7 +694,7 @@ namespace MIG.Gateways
                     responseText = MigService.JsonSerialize(responseObject);
                 }
                 // simple automatic json response type detection
-                if (responseText.StartsWith("[") && responseText.EndsWith("]") || (responseText.StartsWith("{") && responseText.EndsWith("}")))
+                if (responseText.StartsWith("[") && responseText.EndsWith("]") || responseText.StartsWith("{") && responseText.EndsWith("}"))
                 {
                     // send as JSON
                     context.Response.ContentType = "application/json";
@@ -852,7 +864,7 @@ namespace MIG.Gateways
                 Encoding fileEncoding = DetectWebFileEncoding(file);  //TextFileEncodingDetector.DetectTextFileEncoding(file);
                 if (fileEncoding == null)
                     fileEncoding = defaultWebFileEncoding;
-                fileItem.Content = System.IO.File.ReadAllText(file, fileEncoding);  //Encoding.UTF8.GetString(buffer, 0, buffer.Length);
+                fileItem.Content = File.ReadAllText(file, fileEncoding);  //Encoding.UTF8.GetString(buffer, 0, buffer.Length);
                 fileItem.Encoding = fileEncoding;
                 if (cachedItem != null)
                 {
@@ -917,12 +929,12 @@ namespace MIG.Gateways
             case PlatformID.Win32S:
             case PlatformID.Win32Windows:
             case PlatformID.WinCE:
-                path = System.IO.Path.Combine(path, file.Replace("/", "\\").TrimStart('\\'));
+                path = Path.Combine(path, file.Replace("/", "\\").TrimStart('\\'));
                 break;
             case PlatformID.Unix:
             case PlatformID.MacOSX:
             default:
-                path = System.IO.Path.Combine(path, file.TrimStart('/'));
+                path = Path.Combine(path, file.TrimStart('/'));
                 break;
             }
             return path;
