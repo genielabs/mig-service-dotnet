@@ -16,20 +16,18 @@
   limitations under the License.
 */
 
-/*
- *     Author: Generoso Martello <gene@homegenie.it>
- *     Project Homepage: https://github.com/genielabs/mig-service-dotnet
- */
-
 using System;
+using NUnit.Framework;
 
-namespace MIG.Gateways
+namespace MIG.Tests
 {
-    public class MqttServiceGateway
+    [TestFixture]
+    public class Tests
     {
-        public MqttServiceGateway ()
+        [Test]
+        public void Test1()
         {
+            Assert.True(true);
         }
     }
 }
-

@@ -3,11 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MIG", "MIG\MIG.csproj", "{005357C9-7F8E-458E-AFFA-BF84F7D6A6AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests.WebService", "Tests.WebService\Tests.WebService.csproj", "{E4CB8D80-39EC-4347-8FA1-292904B13AD0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.WebService", "Test.WebService\Test.WebService.csproj", "{E4CB8D80-39EC-4347-8FA1-292904B13AD0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MIG.HomeAutomation", "MIG.HomeAutomation\MIG.HomeAutomation.csproj", "{8C90AAEE-6245-4F6F-9D4A-854300C662F6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MIG.Protocols", "MIG.Protocols\MIG.Protocols.csproj", "{C7538C18-D328-4509-B5D7-CDA0491F90F5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MIG.Tests", "MIG.Tests\MIG.Tests.csproj", "{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -67,6 +69,18 @@ Global
 		{E4CB8D80-39EC-4347-8FA1-292904B13AD0}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{E4CB8D80-39EC-4347-8FA1-292904B13AD0}.Release|x86.ActiveCfg = Release|Any CPU
 		{E4CB8D80-39EC-4347-8FA1-292904B13AD0}.Release|x86.Build.0 = Release|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Debug|x86.Build.0 = Debug|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Release|x86.ActiveCfg = Release|Any CPU
+		{5074EC2B-D316-4EEB-9A6F-563728CBEDF3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		Policies = $0
