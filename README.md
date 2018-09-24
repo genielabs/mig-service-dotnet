@@ -182,21 +182,23 @@ So in the previous example where we used the **RegisterApi** methods, we have:
 
 ## NuGet Package
 
-MigService v1.0.0-beta *(pre-release)* is available as a [NuGet package](https://www.nuget.org/packages/MigService).
+MIG is available as a [NuGet package](https://www.nuget.org/packages/MIG).
 
-Run `Install-Package MigService` in the [Package Manager Console](http://docs.nuget.org/docs/start-here/using-the-package-manager-console) or search for “MIG Service” in your IDE’s package management plug-in.
+Run `Install-Package MIG` in the [Package Manager Console](http://docs.nuget.org/docs/start-here/using-the-package-manager-console) or search for “MIG” in your IDE’s package management console.
 
 ## Related Projects
 
-- https://github.com/genielabs/intel-upnp-dlna
+- https://github.com/genielabs/mig-protocols
+- https://github.com/genielabs/mig-protocols-mqttbroker
 - https://github.com/genielabs/mig-controllers-lircremote
+- https://github.com/genielabs/mig-homeauto
 - https://github.com/genielabs/mig-homeauto-insteon
 - https://github.com/genielabs/mig-homeauto-w800rf32
 - https://github.com/genielabs/mig-media-v4lcamera
-- https://github.com/genielabs/mig-protocols-mqttbroker
 - https://github.com/genielabs/mig-sbc-weecoboard
+- https://github.com/genielabs/intel-upnp-dlna
 
 ## License
 
-MigService is open source software, licensed under the terms of Apache license 2.0. See the [LICENSE](LICENSE) file for details.
+MIG is open source software, licensed under the terms of Apache license 2.0. See the [LICENSE](LICENSE) file for details.
 
