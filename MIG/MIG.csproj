@@ -62,10 +62,11 @@
     <Reference Include="Ude">
       <HintPath>..\packages\UDE.CSharp.1.1.0\lib\Ude.dll</HintPath>
     </Reference>
-    <Reference Include="websocket-sharp">
-      <HintPath>..\packages\WebSocketSharp.1.0.3-rc9\lib\websocket-sharp.dll</HintPath>
-    </Reference>
     <Reference Include="System.Web" />
+    <Reference Include="websocket-sharp, Version=1.0.2.32519, Culture=neutral, PublicKeyToken=5660b08a1845a91e">
+      <HintPath>..\packages\WebSocketSharp-NonPreRelease.1.0.0\lib\net35\websocket-sharp.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Gateways\WebServiceUtility.cs" />
