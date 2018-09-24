@@ -196,7 +196,6 @@ Run `Install-Package MIG` in the [Package Manager Console](http://docs.nuget.org
 - https://github.com/genielabs/mig-homeauto-w800rf32
 - https://github.com/genielabs/mig-media-v4lcamera
 - https://github.com/genielabs/mig-sbc-weecoboard
-- https://github.com/genielabs/intel-upnp-dlna
 
 ## License
 

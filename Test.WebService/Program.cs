@@ -50,34 +50,7 @@ namespace Test.WebService
             var ws = migService.AddGateway("WebSocketGateway");
             ws.SetOption("Port", "8181");
 
-            // Configuration can also be loaded from a file as shown below
-            /*
-            MigServiceConfiguration configuration;
-            // Construct an instance of the XmlSerializer with the type
-            // of object that is being deserialized.
-            XmlSerializer mySerializer = new XmlSerializer(typeof(MigServiceConfiguration));
-            // To read the file, create a FileStream.
-            FileStream myFileStream = new FileStream("systemconfig.xml", FileMode.Open);
-            // Call the Deserialize method and cast to the object type.
-            configuration = (MigServiceConfiguration)mySerializer.Deserialize(myFileStream);
-            // Set the configuration
-            migService.Configuration = configuration;
-            */
-
             migService.StartService();
-
-            // Enable some interfaces for testing...
-
-            /*            
-            var zwave = migService.AddInterface("HomeAutomation.ZWave", "MIG.HomeAutomation.dll");
-            zwave.SetOption("Port", "/dev/ttyUSB0");
-            migService.EnableInterface("HomeAutomation.ZWave");
-            */
-
-            /*
-            var upnp = migService.AddInterface("Protocols.UPnP", "MIG.Protocols.dll");
-            migService.EnableInterface("Protocols.UPnP");
-            */
 
             migService.RegisterApi("myapp/demo", (request) =>
             {
