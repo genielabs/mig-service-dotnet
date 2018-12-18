@@ -40,6 +40,8 @@ using MIG.Config;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
 
+using WebSocketSharp;
+
 namespace MIG.Gateways
 {
 
@@ -100,7 +102,8 @@ namespace MIG.Gateways
         private string servicePort = "8080";
         private string serviceUsername = "admin";
         private string servicePassword = "";
-        private bool enableFileCache = false;
+        private string corsAllowOrigin = "*";
+        private bool enableFileCache;
 
         private Encoding defaultWebFileEncoding = Encoding.GetEncoding("UTF-8");
 
@@ -141,6 +144,9 @@ namespace MIG.Gateways
             case "EnableFileCaching":
                 ClearWebCache();
                 bool.TryParse(option.Value, out enableFileCache);
+                break;
+            case "corsAllowOrigin":
+                corsAllowOrigin = option.Value;
                 break;
             default:
                 if (option.Name.StartsWith("HttpCacheIgnore."))
@@ -241,9 +247,22 @@ namespace MIG.Gateways
                 string remoteAddress = request.RemoteEndPoint.Address.ToString();
                 string logExtras = "";
                 //
-                if (servicePassword == "" || requestHasAuthorizationHeader) //request.IsAuthenticated)
+                if (servicePassword.IsNullOrEmpty() || requestHasAuthorizationHeader) //request.IsAuthenticated)
                 {
                     bool verified = false;
+                    //
+                    if (!String.IsNullOrEmpty(corsAllowOrigin))
+                    {
+                        if (requestHasAuthorizationHeader)
+                        {
+                            response.Headers.Set("Access-Control-Allow-Origin", corsAllowOrigin != "*" ? corsAllowOrigin : request.UrlReferrer.Scheme + "://" + request.UrlReferrer.Host + ":" + request.UrlReferrer.Port);
+                            response.Headers.Set("Access-Control-Allow-Credentials", "true");
+                        }
+                        else
+                        {
+                            response.Headers.Set("Access-Control-Allow-Origin", corsAllowOrigin);
+                        }
+                    }
                     //
                     string authUser = "";
                     string authPass = "";
@@ -267,7 +286,7 @@ namespace MIG.Gateways
                     //
                     //TODO: complete authorization (for now with one fixed user 'admin', add multiuser support)
                     //
-                    if (servicePassword == "" || authUser == serviceUsername && Utility.Encryption.SHA1.GenerateHashString(authPass) == servicePassword)
+                    if (servicePassword.IsNullOrEmpty() || authUser == serviceUsername && Utility.Encryption.SHA1.GenerateHashString(authPass) == servicePassword)
                     {
                         verified = true;
                     }
@@ -595,7 +614,6 @@ namespace MIG.Gateways
             response.ContentType = "text/event-stream";
             response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache, no-store, must-revalidate");
             response.Headers.Set(HttpResponseHeader.Pragma, "no-cache");
-            response.Headers.Set("Access-Control-Allow-Origin", "*");
 
             // 2K padding for IE
             var padding = ":" + new String(' ', 2048) + "\n";

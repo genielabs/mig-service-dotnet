@@ -100,10 +100,12 @@ Option List
 
 - BaseUrl (base url for HTML files)
 - HomePath (folder where to get HTML files from)
-- Host (host name or IP - use * for any)
-- Port (TCP port)
-- Password (currently only support single user *admin*)
-- EnableFileCaching (*True* or *False*)
+- Host (host name or IP - use `*` for any)
+- Port (TCP port, default: *`80`*)
+- Username
+- Password
+- EnableFileCaching (*`True`* or *`False`*, default: *`False`*)
+- corsAllowOrigin (default: *`*`*)
 
 Example
 ```csharp
@@ -120,6 +122,8 @@ web.SetOption("Port", "8080");
 web.SetOption("Password", ""); 
 // disable file caching
 web.SetOption("EnableFileCaching", "False"); 
+// disable CORS
+web.SetOption("corsAllowOrigin", ""); 
 ```
 
 ### WebSocketGateway
@@ -188,16 +192,15 @@ Run `Install-Package MIG` in the [Package Manager Console](http://docs.nuget.org
 
 ## Related Projects
 
-- https://github.com/genielabs/mig-protocols
-- https://github.com/genielabs/mig-protocols-mqttbroker
-- https://github.com/genielabs/mig-controllers-lircremote
-- https://github.com/genielabs/mig-homeauto
+- https://github.com/genielabs/mig-homeauto (x10/Z-Wave)
 - https://github.com/genielabs/mig-homeauto-insteon
-- https://github.com/genielabs/mig-homeauto-w800rf32
-- https://github.com/genielabs/mig-media-v4lcamera
-- https://github.com/genielabs/mig-sbc-weecoboard
+- https://github.com/genielabs/mig-protocols (UPnP/DLNA)
+- https://github.com/genielabs/mig-protocols-mqttbroker
+- https://github.com/genemars/mig-controllers-lircremote
+- https://github.com/genemars/mig-homeauto-w800rf32
+- https://github.com/genemars/mig-media-v4lcamera
+- https://github.com/genemars/mig-sbc-weecoboard
 
 ## License
 
 MIG is open source software, licensed under the terms of Apache license 2.0. See the [LICENSE](LICENSE) file for details.
-
