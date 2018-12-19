@@ -247,7 +247,7 @@ namespace MIG.Gateways
                 string remoteAddress = request.RemoteEndPoint.Address.ToString();
                 string logExtras = "";
                 //
-                if (servicePassword.IsNullOrEmpty() || requestHasAuthorizationHeader) //request.IsAuthenticated)
+                if (String.IsNullOrEmpty(servicePassword) || requestHasAuthorizationHeader) //request.IsAuthenticated)
                 {
                     bool verified = false;
                     //
@@ -286,7 +286,7 @@ namespace MIG.Gateways
                     //
                     //TODO: complete authorization (for now with one fixed user 'admin', add multiuser support)
                     //
-                    if (servicePassword.IsNullOrEmpty() || authUser == serviceUsername && Utility.Encryption.SHA1.GenerateHashString(authPass) == servicePassword)
+                    if (String.IsNullOrEmpty(servicePassword) || authUser == serviceUsername && Utility.Encryption.SHA1.GenerateHashString(authPass) == servicePassword)
                     {
                         verified = true;
                     }
