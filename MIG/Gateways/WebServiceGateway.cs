@@ -255,7 +255,7 @@ namespace MIG.Gateways
                     {
                         if (requestHasAuthorizationHeader)
                         {
-                            response.Headers.Set("Access-Control-Allow-Origin", corsAllowOrigin != "*" ? corsAllowOrigin : request.UrlReferrer.Scheme + "://" + request.UrlReferrer.Host + ":" + request.UrlReferrer.Port);
+                            response.Headers.Set("Access-Control-Allow-Origin", (corsAllowOrigin != "*" || request.UrlReferrer == null) ? corsAllowOrigin : request.UrlReferrer.Scheme + "://" + request.UrlReferrer.Host + ":" + request.UrlReferrer.Port);
                             response.Headers.Set("Access-Control-Allow-Credentials", "true");
                         }
                         else
