@@ -692,13 +692,13 @@ namespace MIG
             }
             else
             {
-                // Try processing as MigInterface Api or Web Service Dynamic Api
+                // Try processing as MigInterface API or Web Service Dynamic API
                 var iface = (from miginterface in Interfaces
                     let ns = miginterface.GetType().Namespace
                     let domain = ns.Substring(ns.LastIndexOf(".") + 1) + "." + miginterface.GetType().Name
                     where (command.Domain != null && command.Domain.StartsWith(domain))
                     select miginterface).FirstOrDefault();
-                if (iface != null) // && iface.IsEnabled)
+                if (iface != null && iface.IsEnabled)
                 {
                     //if (iface.IsConnected)
                     //{
