@@ -31,6 +31,8 @@ namespace Test.WebService
         public static void Main(string[] args)
         {
             string webPort = "8088";
+            string authUser = "admin";
+            string authPass = ""; // auth is disabled with empty password
 
             Console.WriteLine("MigService test APP");
             Console.WriteLine("URL: http://localhost:{0}", webPort);
@@ -43,12 +45,15 @@ namespace Test.WebService
             web.SetOption("BaseUrl", "/pages/");
             web.SetOption("Host", "*");
             web.SetOption("Port", webPort);
-            web.SetOption("Password", "");
+            web.SetOption("Username", authUser);
+            web.SetOption("Password", authPass);
             web.SetOption("EnableFileCaching", "False");
 
             // Add and configure the Web Socket gateway
             var ws = migService.AddGateway("WebSocketGateway");
             ws.SetOption("Port", "8181");
+            ws.SetOption("Username", authUser);
+            ws.SetOption("Password", authPass);
 
             migService.StartService();
 

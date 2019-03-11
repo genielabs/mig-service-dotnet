@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using MIG.Config;
 
 using WebSocketSharp;
+using WebSocketSharp.Net;
 using WebSocketSharp.Server;
 
 namespace MIG.Gateways
@@ -52,7 +53,9 @@ namespace MIG.Gateways
         public event PostProcessRequestEventHandler PostProcessRequest;
 
         private WebSocketServer wsocketServer;
-        private int servicePort = 8181;
+        private int servicePort = 88;
+        private string serviceUsername = "admin";
+        private string servicePassword = "";
 
         public WebSocketGateway()
         {
@@ -62,9 +65,17 @@ namespace MIG.Gateways
 
         public void OnSetOption(Option option)
         {
-            if (option.Name.Equals("Port"))
+            switch (option.Name)
             {
-                int.TryParse(option.Value, out servicePort);
+                case "Port":
+                    int.TryParse(option.Value, out servicePort);
+                    break;
+                case "Username":
+                    serviceUsername = option.Value;
+                    break;
+                case "Password":
+                    servicePassword = option.Value;
+                    break;
             }
         }
 
@@ -84,6 +95,14 @@ namespace MIG.Gateways
                     // To ignore the extensions requested from a client.
                     IgnoreExtensions = true
                 });
+                if (!servicePassword.IsNullOrEmpty())
+                {
+                    wsocketServer.AuthenticationSchemes = AuthenticationSchemes.Basic;
+                    wsocketServer.Realm = "WebSocket Auth";
+                    wsocketServer.UserCredentialsFinder = id => id.Name == serviceUsername
+                        ? new NetworkCredential (serviceUsername, servicePassword)
+                        : null;
+                }
                 wsocketServer.Start();
                 success = true;
             }

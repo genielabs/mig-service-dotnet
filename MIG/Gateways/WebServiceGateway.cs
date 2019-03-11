@@ -138,6 +138,9 @@ namespace MIG.Gateways
             case "Port":
                 servicePort = option.Value;
                 break;
+            case "Username":
+                serviceUsername = option.Value;
+                break;
             case "Password":
                 servicePassword = option.Value;
                 break;
