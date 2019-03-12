@@ -40,11 +40,8 @@ using MIG.Config;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
 
-using WebSocketSharp;
-
 namespace MIG.Gateways
 {
-
     class WebFile
     {
         public DateTime Timestamp = DateTime.Now;
@@ -104,6 +101,7 @@ namespace MIG.Gateways
         private string servicePassword = "";
         private string corsAllowOrigin = "*";
         private bool enableFileCache;
+        private AuthenticationSchemes authenticationSchema = AuthenticationSchemes.Digest;
 
         private Encoding defaultWebFileEncoding = Encoding.GetEncoding("UTF-8");
 
@@ -126,35 +124,36 @@ namespace MIG.Gateways
         {
             switch (option.Name)
             {
-            case "BaseUrl":
+            case WebServiceGatewayOptions.BaseUrl:
                 baseUrl = option.Value.Trim('/') + "/";
                 break;
-            case "HomePath":
+            case WebServiceGatewayOptions.HomePath:
                 homePath = option.Value;
                 break;
-            case "Host":
+            case WebServiceGatewayOptions.Host:
                 serviceHost = option.Value;
                 break;
-            case "Port":
+            case WebServiceGatewayOptions.Port:
                 servicePort = option.Value;
                 break;
-            case "Username":
+            case WebServiceGatewayOptions.Username:
                 serviceUsername = option.Value;
                 break;
-            case "Password":
+            case WebServiceGatewayOptions.Password:
                 servicePassword = option.Value;
                 break;
-            case "EnableFileCaching":
+            case WebServiceGatewayOptions.EnableFileCaching:
                 ClearWebCache();
                 bool.TryParse(option.Value, out enableFileCache);
                 break;
+            case WebServiceGatewayOptions.CorsAllowOrigin:
             case "corsAllowOrigin":
                 corsAllowOrigin = option.Value;
                 break;
             default:
-                if (option.Name.StartsWith("HttpCacheIgnore."))
+                if (option.Name.StartsWith(WebServiceGatewayOptions.HttpCacheIgnorePrefix))
                     HttpCacheIgnoreAdd(option.Value);
-                else if (option.Name.StartsWith("UrlAlias."))
+                else if (option.Name.StartsWith(WebServiceGatewayOptions.UrlAliasPrefix))
                     UrlAliasAdd(option.Value);
                 break;
             }
@@ -226,6 +225,7 @@ namespace MIG.Gateways
                     }
                 }
                 //
+                // TODO: deprecate this - implement true SSL support
                 if (request.IsSecureConnection)
                 {
                     var clientCertificate = request.GetClientCertificate();
@@ -267,8 +267,6 @@ namespace MIG.Gateways
                         }
                     }
                     //
-                    string authUser = "";
-                    string authPass = "";
                     //
                     //NOTE: context.User.Identity and request.IsAuthenticated
                     //aren't working under MONO with this code =/
@@ -281,19 +279,35 @@ namespace MIG.Gateways
                         //identity = (HttpListenerBasicIdentity)context.User.Identity;
                         // authuser = identity.Name;
                         // authpass = identity.Password;
-                        byte[] encodedDataAsBytes = Convert.FromBase64String(request.Headers["Authorization"].Split(' ')[1]);
-                        string authtoken = Encoding.UTF8.GetString(encodedDataAsBytes);
-                        authUser = authtoken.Split(':')[0];
-                        authPass = authtoken.Split(':')[1];
+                        string[] authorizationParts = request.Headers["Authorization"].Split(' ');
+                        string authorizationSchema = authorizationParts[0];
+                        if (authorizationSchema == AuthenticationSchemes.Basic.ToString())
+                        {
+                            byte[] encodedDataAsBytes = Convert.FromBase64String(authorizationParts[1]);
+                            string authorizationToken = Encoding.UTF8.GetString(encodedDataAsBytes);
+                            var authUser = authorizationToken.Split(':')[0];
+                            var authPass = authorizationToken.Split(':')[1];
+                            if (authUser == serviceUsername && authPass == servicePassword)
+                            {
+                                verified = true;
+                            }
+                        }
+                        else if (authorizationSchema == AuthenticationSchemes.Digest.ToString())
+                        {
+                            // TODO: implment Digest auth
+                            //verified = true;
+                            throw new NotImplementedException("Digest");
+                        }
+                        else
+                        {
+                            // TODO: unsupported authorization schema
+                        }
                     }
-                    //
-                    //TODO: complete authorization (for now with one fixed user 'admin', add multiuser support)
-                    //
-                    if (String.IsNullOrEmpty(servicePassword) || authUser == serviceUsername && Utility.Encryption.SHA1.GenerateHashString(authPass) == servicePassword)
+                    // if no password is set authentication is disabled
+                    if (String.IsNullOrEmpty(servicePassword))
                     {
                         verified = true;
                     }
-                    //
                     if (verified)
                     {
                         string url = request.RawUrl.TrimStart('/').TrimStart('\\').TrimStart('.');
@@ -566,19 +580,35 @@ namespace MIG.Gateways
                     else
                     {
                         response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                        // this will only work in Linux (mono)
-                        //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
-                        // this works both on Linux and Windows
-                        response.AddHeader("WWW-Authenticate", "Basic realm=\"User Visible Realm\"");
+                        if (authenticationSchema == AuthenticationSchemes.Digest)
+                        {
+                            //WWW-Authenticate →Digest realm=”SecureZone”, nonce=”636261917149325544–5cd5f84dd2b03c350ce40be42484968168ac7c6c”, algorithm=MD5, qop=”auth”
+                            response.AddHeader("WWW-Authenticate", "Digest realm=\"secure@realm.com\", qop=\"auth,auth-int\", nonce=\"dcd98b7102dd2f0e8b11d0f600bfb0c093\", opaque=\"5ccc069c403ebaf9f0171e9517f40e41\"");
+                        }
+                        else
+                        {
+                            // this will only work in Linux (mono)
+                            //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
+                            // this works both on Linux and Windows
+                            response.AddHeader("WWW-Authenticate", "Basic realm=\"User Visible Realm\"");
+                        }
                     }
                 }
                 else
                 {
                     response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                    // this will only work in Linux (mono)
-                    //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
-                    // this works both on Linux and Windows
-                    response.AddHeader("WWW-Authenticate", "Basic realm=\"User Visible Realm\"");
+                    if (authenticationSchema == AuthenticationSchemes.Digest)
+                    {
+                        response.AddHeader("WWW-Authenticate", "Digest realm=\"secure@realm.com\", qop=\"auth,auth-int\", nonce=\"dcd98b7102dd2f0e8b11d0f600bfb0c093\", opaque=\"5ccc069c403ebaf9f0171e9517f40e41\"");
+                        //response.AddHeader("WWW-Authenticate", "Digest realm=\"Secure Zone\", nonce=\"636261917149325544–5cd5f84dd2b03c350ce40be42484968168ac7c6c\", algorithm=MD5, qop=\"auth\"");
+                    }
+                    else
+                    {
+                        // this will only work in Linux (mono)
+                        //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
+                        // this works both on Linux and Windows
+                        response.AddHeader("WWW-Authenticate", "Basic realm=\"User Visible Realm\"");
+                    }
                 }
                 MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod,
                     $"{response.StatusCode} {request.RawUrl}{logExtras}"));

@@ -17,51 +17,60 @@
 */
 
 using System;
-using System.IO;
 using System.Threading;
-using System.Xml.Serialization;
 
 using MIG;
-using MIG.Config;
+using MIG.Gateways;
 
 namespace Test.WebService
 {
+    class ApiCommands
+    {
+        public const string Echo = "echo";
+        public const string Ping = "ping";
+        public const string Greet = "greet";
+    }
+    
     class MainClass
     {
         public static void Main(string[] args)
         {
-            string webPort = "8088";
-            string authUser = "admin";
-            string authPass = ""; // auth is disabled with empty password
+            var Log = MigService.Log;
+            string webServicePort = "8088";
+            string webSocketPort = "8181";
 
-            Console.WriteLine("MigService test APP");
-            Console.WriteLine("URL: http://localhost:{0}", webPort);
+            string authUser = "admin";
+            string authPass = "test"; // auth is disabled with empty password
+
+            Log.Info("MigService test APP");
+            Log.Info("URL: http://localhost:{0}", webServicePort);
 
             var migService = new MigService();
 
-            // Add and configure the Web gateway
-            var web = migService.AddGateway("WebServiceGateway");
-            web.SetOption("HomePath", "html");
-            web.SetOption("BaseUrl", "/pages/");
-            web.SetOption("Host", "*");
-            web.SetOption("Port", webPort);
-            web.SetOption("Username", authUser);
-            web.SetOption("Password", authPass);
-            web.SetOption("EnableFileCaching", "False");
+            // Add and configure the WebService gateway
+            var web = migService.AddGateway(Gateway.WebServiceGateway);
+            web.SetOption(WebServiceGatewayOptions.HomePath, "html");
+            web.SetOption(WebServiceGatewayOptions.BaseUrl, "/pages/");
+            web.SetOption(WebServiceGatewayOptions.Host, "*");
+            web.SetOption(WebServiceGatewayOptions.Port, webServicePort);
+            web.SetOption(WebServiceGatewayOptions.Username, authUser);
+            web.SetOption(WebServiceGatewayOptions.Password, authPass);
+            web.SetOption(WebServiceGatewayOptions.EnableFileCaching, "False");
 
-            // Add and configure the Web Socket gateway
-            var ws = migService.AddGateway("WebSocketGateway");
-            ws.SetOption("Port", "8181");
-            ws.SetOption("Username", authUser);
-            ws.SetOption("Password", authPass);
+            // Add and configure the WebSocket gateway
+            var ws = migService.AddGateway(Gateway.WebSocketGateway);
+            ws.SetOption(WebSocketGatewayOptions.Port, webSocketPort);
+            ws.SetOption(WebSocketGatewayOptions.Username, authUser);
+            ws.SetOption(WebSocketGatewayOptions.Password, authPass);
 
             migService.StartService();
 
+            // API commands and events are exposed to all active gateways (WebService and WebSocket in this example)
             migService.RegisterApi("myapp/demo", (request) =>
             {
-                Console.WriteLine("Received API call from source {0}\n", request.Context.Source);
-                Console.WriteLine("[Context data]\n{0}\n", MigService.JsonSerialize(request.Context.Data, true));
-                Console.WriteLine("[Mig Command]\n{0}\n", MigService.JsonSerialize(request.Command, true));
+                Log.Debug("Received API call over {0}\n", request.Context.Source);
+                Log.Debug("[Context data]\n{0}\n", request.Context.Data);
+                Log.Debug("[Mig Command]\n{0}\n", MigService.JsonSerialize(request.Command, true));
 
                 var cmd = request.Command;
 
@@ -72,16 +81,37 @@ namespace Test.WebService
 
                 switch (cmd.Command)
                 {
-                case "greet":
+                case ApiCommands.Greet:
                     var name = cmd.GetOption(0);
-                    migService.RaiseEvent(typeof(MainClass), cmd.Domain, cmd.Address, "Reply to Greet", "Greet.User", name);
+                    migService.RaiseEvent(
+                        typeof(MainClass),
+                        cmd.Domain, 
+                        cmd.Address,
+                        "Reply to Greet",
+                        "Greet.User",
+                        name
+                    );
                     break;
-                case "echo":
+                case ApiCommands.Echo:
                     string fullRequestPath = cmd.OriginalRequest;
-                    migService.RaiseEvent(typeof(MainClass), cmd.Domain, cmd.Address, "Reply to Echo", "Echo.Data", fullRequestPath);
+                    migService.RaiseEvent(
+                        typeof(MainClass),
+                        cmd.Domain,
+                        cmd.Address,
+                        "Reply to Echo",
+                        "Echo.Data",
+                        fullRequestPath
+                    );
                     break;
-                case "ping":
-                    migService.RaiseEvent(typeof(MainClass), cmd.Domain, cmd.Address, "Reply to Ping", "Ping.Reply", "PONG");
+                case ApiCommands.Ping:
+                    migService.RaiseEvent(
+                        typeof(MainClass),
+                        cmd.Domain,
+                        cmd.Address,
+                        "Reply to Ping",
+                        "Ping.Reply",
+                        "PONG"
+                    );
                     break;
                 }
 
@@ -90,9 +120,8 @@ namespace Test.WebService
 
             while (true)
             {
-                Thread.Sleep(10000);
+                Thread.Sleep(5000);
             }
-
         }
     }
 }

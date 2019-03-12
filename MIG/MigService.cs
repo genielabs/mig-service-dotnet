@@ -37,6 +37,8 @@ using NLog;
 using Newtonsoft.Json.Serialization;
 using System.Reflection;
 
+using Gateway = MIG.Config.Gateway;
+
 namespace MIG
 {
     

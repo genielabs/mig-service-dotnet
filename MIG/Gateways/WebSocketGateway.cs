@@ -32,6 +32,7 @@ using WebSocketSharp.Server;
 
 namespace MIG.Gateways
 {
+
     public class MigWsServer : WebSocketBehavior
     {
         private WebSocketGateway gateway;
@@ -67,13 +68,13 @@ namespace MIG.Gateways
         {
             switch (option.Name)
             {
-                case "Port":
+                case WebSocketGatewayOptions.Port:
                     int.TryParse(option.Value, out servicePort);
                     break;
-                case "Username":
+                case WebSocketGatewayOptions.Username:
                     serviceUsername = option.Value;
                     break;
-                case "Password":
+                case WebSocketGatewayOptions.Password:
                     servicePassword = option.Value;
                     break;
             }
@@ -81,7 +82,10 @@ namespace MIG.Gateways
 
         public void OnInterfacePropertyChanged(object sender, InterfacePropertyChangedEventArgs args)
         {
-            wsocketServer.WebSocketServices.Broadcast(MigService.JsonSerialize(args.EventData));
+            if (wsocketServer.IsListening)
+            {
+                wsocketServer.WebSocketServices.Broadcast(MigService.JsonSerialize(args.EventData));
+            }
         }
 
         public bool Start()
@@ -100,7 +104,7 @@ namespace MIG.Gateways
                     wsocketServer.AuthenticationSchemes = AuthenticationSchemes.Basic;
                     wsocketServer.Realm = "WebSocket Auth";
                     wsocketServer.UserCredentialsFinder = id => id.Name == serviceUsername
-                        ? new NetworkCredential (serviceUsername, servicePassword)
+                        ? new NetworkCredential (serviceUsername, Utility.Encryption.SHA1.GenerateHashString(servicePassword))
                         : null;
                 }
                 wsocketServer.Start();

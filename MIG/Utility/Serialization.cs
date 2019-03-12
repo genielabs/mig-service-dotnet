@@ -29,6 +29,7 @@ namespace MIG.Utility
         public static string JsonSerialize(object data, bool indent = false)
         {
             JsonSerializerSettings settings = new JsonSerializerSettings();
+            settings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
             settings.ContractResolver = new CustomResolver();
             if (indent)
                 settings.Formatting = Formatting.Indented;
