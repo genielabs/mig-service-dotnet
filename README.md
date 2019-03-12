@@ -10,9 +10,9 @@ MIG is a .Net library providing an integrated solution for developing networked 
 
 We have two main actors in MIG: **Gateway** and **Interface**.
 
-A Gateway is the medium used for receiving API commands from the client and for transmitting responses and events back to it.
+A *Gateway* is the medium used for receiving API commands from the client and for transmitting responses and events back to it.
 
-An Interface is where all API commands are defined and related actions take place.
+An *Interface* is where all API commands are defined and related actions take place.
 
 So, when writing an application based on MIG, the developer will just focus on the *API* coding.
 
@@ -155,7 +155,8 @@ A MIG Gateway for supporting the MQTT protocol will be available in future relea
 ## Interfaces 
 
 While in the earlier examples we used the **RegisterApi** method to dynamically add new API commands, these can also be added by using **Interface** plugins.
-Interface plugins are library modules (dll) that can be dinamically loaded into MIG. See [MIG.HomeAutomation](MIG.HomeAutomation) project source code for an example about how to create a MIG Interface plugin.
+Interface plugins are library modules (dll) that can be dinamically loaded into MIG. See [MIG.HomeAutomation](https://github.com/genielabs/mig-homeauto)
+project source code for an example about how to create a MIG Interface plugin.
 
 Code for loading an Interface plugin:
 ```csharp
@@ -192,6 +193,7 @@ Run `Install-Package MIG` in the [Package Manager Console](http://docs.nuget.org
 
 ## Related Projects
 
+- https://github.com/genielabs/HomeGenie (smart home server based on MIG)
 - https://github.com/genielabs/mig-homeauto (x10/Z-Wave)
 - https://github.com/genielabs/mig-homeauto-insteon
 - https://github.com/genielabs/mig-protocols (UPnP/DLNA)
