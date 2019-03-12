@@ -304,7 +304,7 @@ namespace MIG.Gateways
                         }
                     }
                     // if no password is set authentication is disabled
-                    if (String.IsNullOrEmpty(servicePassword))
+                    if (!verified && String.IsNullOrEmpty(servicePassword))
                     {
                         verified = true;
                     }

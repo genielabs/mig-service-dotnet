@@ -104,8 +104,9 @@ namespace MIG.Gateways
                     wsocketServer.AuthenticationSchemes = AuthenticationSchemes.Basic;
                     wsocketServer.Realm = "WebSocket Auth";
                     wsocketServer.UserCredentialsFinder = id => id.Name == serviceUsername
-                        ? new NetworkCredential (serviceUsername, Utility.Encryption.SHA1.GenerateHashString(servicePassword))
+                        ? new NetworkCredential (serviceUsername, servicePassword)
                         : null;
+                    // TODO: also implement Digest auth
                 }
                 wsocketServer.Start();
                 success = true;
