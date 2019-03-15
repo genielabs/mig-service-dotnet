@@ -53,8 +53,10 @@ namespace MIG.Gateways
         public event PreProcessRequestEventHandler PreProcessRequest;
         public event PostProcessRequestEventHandler PostProcessRequest;
 
-        private WebSocketServer wsocketServer;
-        private int servicePort = 88;
+        private WebSocketServer webSocketServer;
+        private int servicePort = 8181;
+
+        private string authenticationSchema = WebAuthenticationSchema.None;
         private string serviceUsername = "admin";
         private string servicePassword = "";
 
@@ -71,6 +73,12 @@ namespace MIG.Gateways
                 case WebSocketGatewayOptions.Port:
                     int.TryParse(option.Value, out servicePort);
                     break;
+                case WebSocketGatewayOptions.Authentication:
+                    if (option.Value == WebAuthenticationSchema.Basic || option.Value == WebAuthenticationSchema.Digest)
+                    {
+                        authenticationSchema = option.Value;
+                    }                    
+                    break;
                 case WebSocketGatewayOptions.Username:
                     serviceUsername = option.Value;
                     break;
@@ -82,9 +90,9 @@ namespace MIG.Gateways
 
         public void OnInterfacePropertyChanged(object sender, InterfacePropertyChangedEventArgs args)
         {
-            if (wsocketServer.IsListening)
+            if (webSocketServer.IsListening)
             {
-                wsocketServer.WebSocketServices.Broadcast(MigService.JsonSerialize(args.EventData));
+                webSocketServer.WebSocketServices.Broadcast(MigService.JsonSerialize(args.EventData));
             }
         }
 
@@ -94,21 +102,20 @@ namespace MIG.Gateways
             try
             {
                 Stop();
-                wsocketServer = new WebSocketServer(servicePort);
-                wsocketServer.AddWebSocketService<MigWsServer>("/events", () => new MigWsServer(this) {
+                webSocketServer = new WebSocketServer(servicePort);
+                webSocketServer.AddWebSocketService("/events", () => new MigWsServer(this) {
                     // To ignore the extensions requested from a client.
                     IgnoreExtensions = true
                 });
-                if (!servicePassword.IsNullOrEmpty())
+                if (authenticationSchema != WebAuthenticationSchema.None)
                 {
-                    wsocketServer.AuthenticationSchemes = AuthenticationSchemes.Basic;
-                    wsocketServer.Realm = "WebSocket Auth";
-                    wsocketServer.UserCredentialsFinder = id => id.Name == serviceUsername
+                    webSocketServer.AuthenticationSchemes = (authenticationSchema == WebAuthenticationSchema.Basic) ? AuthenticationSchemes.Basic : AuthenticationSchemes.Digest;
+                    webSocketServer.Realm = "user@default";
+                    webSocketServer.UserCredentialsFinder = id => id.Name == serviceUsername
                         ? new NetworkCredential (serviceUsername, servicePassword)
                         : null;
-                    // TODO: also implement Digest auth
                 }
-                wsocketServer.Start();
+                webSocketServer.Start();
                 success = true;
             }
             catch (Exception e)
@@ -120,10 +127,10 @@ namespace MIG.Gateways
 
         public void Stop()
         {
-            if (wsocketServer != null)
+            if (webSocketServer != null)
             {
-                wsocketServer.Stop();
-                wsocketServer = null;
+                webSocketServer.Stop();
+                webSocketServer = null;
             }
         }
 

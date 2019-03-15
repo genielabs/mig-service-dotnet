@@ -39,16 +39,32 @@ using CommonMark;
 using MIG.Config;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
+using System.Xml;
+
+using WebSocketSharp;
 
 namespace MIG.Gateways
 {
-    class WebFile
+    public class User
     {
-        public DateTime Timestamp = DateTime.Now;
-        public string FilePath = "";
-        public string Content = "";
-        public Encoding Encoding;
-        public bool IsCached;
+        public User(string name, string realm, string password)
+        {
+            Name = name;
+            Realm = realm;
+            Password = password;
+            SHA1Password = Utility.Encryption.SHA1.GenerateHashString(password);
+        }
+        public readonly string Name;
+        public readonly string Realm;
+        public string Password;
+        public string SHA1Password;
+    }
+
+    public class BasicAuthenticationEventArgs
+    {
+        public string Username { get; internal set; }
+        public string Password { get; internal set; }
+        public User UserData { get; internal set; }
     }
 
     class SseEvent
@@ -84,13 +100,24 @@ namespace MIG.Gateways
         public AutoResetEvent ListenForNextRequest { get { return listenForNextRequest; } }
     }
 
+    class WebFile
+    {
+        public DateTime Timestamp = DateTime.Now;
+        public string FilePath = "";
+        public string Content = "";
+        public Encoding Encoding;
+        public bool IsCached;
+    }
+
     public class WebServiceGateway : IMigGateway, IDisposable
     {
         public event PreProcessRequestEventHandler PreProcessRequest;
         public event PostProcessRequestEventHandler PostProcessRequest;
         //private event InterfacePropertyChangedEventHandler PropertyChanged;
 
-        private ManualResetEvent stopEvent = new ManualResetEvent(false);
+        // Concurrency
+        private readonly ManualResetEvent stopEvent = new ManualResetEvent(false);
+        private readonly object syncLock = new object();
 
         // Web Service configuration fields
         private string baseUrl = "/";
@@ -101,17 +128,34 @@ namespace MIG.Gateways
         private string servicePassword = "";
         private string corsAllowOrigin = "*";
         private bool enableFileCache;
-        private AuthenticationSchemes authenticationSchema = AuthenticationSchemes.Digest;
+        private string authenticationSchema = WebAuthenticationSchema.None;
 
-        private Encoding defaultWebFileEncoding = Encoding.GetEncoding("UTF-8");
+        // Authentication
+        private const string defaultUserRealm = "user@default";
+        private const string digestAuthorizationHeader = "Digest realm=\"" + defaultUserRealm + "\", qop=\"auth\", nonce=\"{0}\", opaque=\"{1}\"";
+        private readonly List<User> users = new List<User>();
+        public delegate bool BasicAuthenticationEventHandler(object sender, BasicAuthenticationEventArgs e);
+        public event BasicAuthenticationEventHandler BasicAuthenticationHandler;
+        protected virtual bool OnBasicAuthentication(BasicAuthenticationEventArgs args)
+        {
+            if (BasicAuthenticationHandler != null)
+            {
+                return BasicAuthenticationHandler(this, args);
+            }
+            return false;
+        }
 
-        private List<WebFile> filesCache = new List<WebFile>();
-        private List<string> httpCacheIgnoreList = new List<string>();
-        private List<string> urlAliases = new List<string>();
+        private readonly Encoding defaultWebFileEncoding = Encoding.GetEncoding("UTF-8");
 
+        // Features
+        private readonly List<WebFile> filesCache = new List<WebFile>();
+        private readonly List<string> httpCacheIgnoreList = new List<string>();
+        private readonly List<string> urlAliases = new List<string>();
+
+        // Server Sent Events (EventSource)
+        private readonly List<SseEvent> sseEventBuffer;
+        private readonly object sseEventToken = new object();
         private const int sseEventBufferSize = 100;
-        private List<SseEvent> sseEventBuffer;
-        private object sseEventToken = new object();
 
         public WebServiceGateway()
         {
@@ -136,6 +180,12 @@ namespace MIG.Gateways
             case WebServiceGatewayOptions.Port:
                 servicePort = option.Value;
                 break;
+            case WebServiceGatewayOptions.Authentication:
+                if (option.Value == WebAuthenticationSchema.Basic || option.Value == WebAuthenticationSchema.Digest)
+                {
+                    authenticationSchema = option.Value;
+                }
+                break;
             case WebServiceGatewayOptions.Username:
                 serviceUsername = option.Value;
                 break;
@@ -156,6 +206,16 @@ namespace MIG.Gateways
                 else if (option.Name.StartsWith(WebServiceGatewayOptions.UrlAliasPrefix))
                     UrlAliasAdd(option.Value);
                 break;
+            }
+            if (!serviceUsername.IsNullOrEmpty())
+            {
+                var user = users.FirstOrDefault(u => u.Realm == defaultUserRealm);
+                if (user != null)
+                {
+                    users.Remove(user);
+                }
+                user = new User(serviceUsername, defaultUserRealm, servicePassword);
+                users.Add(user);
             }
         }
 
@@ -208,10 +268,8 @@ namespace MIG.Gateways
             try
             {
                 var context = state as HttpListenerContext;
-                //
                 request = context.Request;
                 response = context.Response;
-                //
                 if (request.UserLanguages != null && request.UserLanguages.Length > 0)
                 {
                     try
@@ -224,7 +282,6 @@ namespace MIG.Gateways
                     {
                     }
                 }
-                //
                 // TODO: deprecate this - implement true SSL support
                 if (request.IsSecureConnection)
                 {
@@ -242,18 +299,16 @@ namespace MIG.Gateways
                         return;
                     }
                 }
-                //
+
                 response.Headers.Set(HttpResponseHeader.Server, "MIG WebService Gateway");
                 response.KeepAlive = false;
-                //
+
                 bool requestHasAuthorizationHeader = request.Headers["Authorization"] != null;
                 string remoteAddress = request.RemoteEndPoint.Address.ToString();
                 string logExtras = "";
-                //
-                if (String.IsNullOrEmpty(servicePassword) || requestHasAuthorizationHeader) //request.IsAuthenticated)
+                if (authenticationSchema == WebAuthenticationSchema.None || requestHasAuthorizationHeader)
                 {
                     bool verified = false;
-                    //
                     if (!String.IsNullOrEmpty(corsAllowOrigin))
                     {
                         if (requestHasAuthorizationHeader)
@@ -267,7 +322,6 @@ namespace MIG.Gateways
                         }
                     }
                     //
-                    //
                     //NOTE: context.User.Identity and request.IsAuthenticated
                     //aren't working under MONO with this code =/
                     //so we proceed by manually parsing Authorization header
@@ -276,38 +330,76 @@ namespace MIG.Gateways
                     //
                     if (requestHasAuthorizationHeader)
                     {
+                        var user = GetDefaultUser();
                         //identity = (HttpListenerBasicIdentity)context.User.Identity;
                         // authuser = identity.Name;
                         // authpass = identity.Password;
                         string[] authorizationParts = request.Headers["Authorization"].Split(' ');
                         string authorizationSchema = authorizationParts[0];
-                        if (authorizationSchema == AuthenticationSchemes.Basic.ToString())
+                        if (authorizationSchema == WebAuthenticationSchema.Basic)
                         {
                             byte[] encodedDataAsBytes = Convert.FromBase64String(authorizationParts[1]);
                             string authorizationToken = Encoding.UTF8.GetString(encodedDataAsBytes);
                             var authUser = authorizationToken.Split(':')[0];
                             var authPass = authorizationToken.Split(':')[1];
-                            if (authUser == serviceUsername && authPass == servicePassword)
+                            if (BasicAuthenticationHandler != null)
+                            {
+                                var args = new BasicAuthenticationEventArgs();
+                                args.Username = authUser;
+                                args.Password = authPass;
+                                args.UserData = user;
+                                verified = OnBasicAuthentication(args);
+                            }
+                            else if (user.Name == authUser && user.Password == authPass)
                             {
                                 verified = true;
                             }
                         }
-                        else if (authorizationSchema == AuthenticationSchemes.Digest.ToString())
+                        else if (authorizationSchema == WebAuthenticationSchema.Digest)
                         {
-                            // TODO: implment Digest auth
-                            //verified = true;
-                            throw new NotImplementedException("Digest");
+                            if (user != null)
+                            {
+                                int digestIndex = request.Headers["Authorization"].IndexOf(WebAuthenticationSchema.Digest + " ");
+                                string digestParameters = request.Headers["Authorization"].Substring(digestIndex + 7);
+                                try
+                                {
+                                    Dictionary<string, string> parameters = digestParameters.Split(',')
+                                        .Select(value => value.Split('='))
+                                        .ToDictionary(kv => kv[0].Trim(new char[] {' ', '"'}),
+                                            kv => kv[1].Trim(new char[] {' ', '"'}));
+                                    string uri = parameters["uri"];
+                                    string nonce = parameters["nonce"];
+                                    string nc = parameters["nc"];
+                                    string cnonce = parameters["cnonce"];
+                                    string qop = parameters["qop"];
+                                    string responseHash = parameters["response"];
+                                    // calculate verification hash
+                                    string a1 = Utility.Encryption.MD5Core
+                                        .GetHashString(user.Name + ":" + user.Realm + ":" + user.Password).ToLower();
+                                    string a2 = Utility.Encryption.MD5Core.GetHashString(request.HttpMethod + ":" + uri)
+                                        .ToLower();
+                                    string verificationHash = Utility.Encryption.MD5Core
+                                        .GetHashString(
+                                            a1 + ":" + nonce + ":" + nc + ":" + cnonce + ":" + qop + ":" + a2)
+                                        .ToLower();
+                                    // authenticate
+                                    if (responseHash == verificationHash)
+                                    {
+                                        verified = true;
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod, e));
+                                }
+                            }
                         }
                         else
                         {
-                            // TODO: unsupported authorization schema
+                            throw new NotImplementedException(authorizationSchema);
                         }
                     }
-                    // if no password is set authentication is disabled
-                    if (!verified && String.IsNullOrEmpty(servicePassword))
-                    {
-                        verified = true;
-                    }
+                    verified |= (authenticationSchema == WebAuthenticationSchema.None);
                     if (verified)
                     {
                         string url = request.RawUrl.TrimStart('/').TrimStart('\\').TrimStart('.');
@@ -321,7 +413,6 @@ namespace MIG.Gateways
                         {
                             // default home redirect
                             response.Redirect("/" + baseUrl.TrimEnd('/') + "/index.html"); 
-                            //TODO: find a solution for HG homepage redirect ---> ?" + new TimeSpan(DateTime.UtcNow.Ticks).TotalMilliseconds + "#page_control");
                             response.Close();
                         }
                         else
@@ -569,7 +660,7 @@ namespace MIG.Gateways
                                 }
                                 catch (Exception eh)
                                 {
-                                    // TODO: add error logging 
+                                    // TODO: add error logging
                                     Console.Error.WriteLine(eh);
                                 }
                             }
@@ -580,34 +671,38 @@ namespace MIG.Gateways
                     else
                     {
                         response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                        if (authenticationSchema == AuthenticationSchemes.Digest)
+                        if (authenticationSchema == WebAuthenticationSchema.Digest)
                         {
-                            //WWW-Authenticate →Digest realm=”SecureZone”, nonce=”636261917149325544–5cd5f84dd2b03c350ce40be42484968168ac7c6c”, algorithm=MD5, qop=”auth”
-                            response.AddHeader("WWW-Authenticate", "Digest realm=\"secure@realm.com\", qop=\"auth,auth-int\", nonce=\"dcd98b7102dd2f0e8b11d0f600bfb0c093\", opaque=\"5ccc069c403ebaf9f0171e9517f40e41\"");
+                            string nonce = Guid.NewGuid().ToString();
+                            string opaque = Guid.NewGuid().ToString();
+                            string header = String.Format(digestAuthorizationHeader, nonce, opaque);
+                            response.AddHeader("WWW-Authenticate", header);
                         }
                         else
                         {
                             // this will only work in Linux (mono)
                             //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                             // this works both on Linux and Windows
-                            response.AddHeader("WWW-Authenticate", "Basic realm=\"User Visible Realm\"");
+                            response.AddHeader("WWW-Authenticate", "Basic realm=\"" + defaultUserRealm + "\"");
                         }
                     }
                 }
                 else
                 {
                     response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                    if (authenticationSchema == AuthenticationSchemes.Digest)
+                    if (authenticationSchema == WebAuthenticationSchema.Digest)
                     {
-                        response.AddHeader("WWW-Authenticate", "Digest realm=\"secure@realm.com\", qop=\"auth,auth-int\", nonce=\"dcd98b7102dd2f0e8b11d0f600bfb0c093\", opaque=\"5ccc069c403ebaf9f0171e9517f40e41\"");
-                        //response.AddHeader("WWW-Authenticate", "Digest realm=\"Secure Zone\", nonce=\"636261917149325544–5cd5f84dd2b03c350ce40be42484968168ac7c6c\", algorithm=MD5, qop=\"auth\"");
+                        string nonce = Guid.NewGuid().ToString();
+                        string opaque = Guid.NewGuid().ToString();
+                        string header = String.Format(digestAuthorizationHeader, nonce, opaque);
+                        response.AddHeader("WWW-Authenticate", header);
                     }
                     else
                     {
                         // this will only work in Linux (mono)
                         //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                         // this works both on Linux and Windows
-                        response.AddHeader("WWW-Authenticate", "Basic realm=\"User Visible Realm\"");
+                        response.AddHeader("WWW-Authenticate", "Basic realm=\"" + defaultUserRealm + "\"");
                     }
                 }
                 MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod,
@@ -764,10 +859,6 @@ namespace MIG.Gateways
         {
             stopEvent.Reset();
             HttpListener listener = new HttpListener();
-            if (servicePassword != "")
-            {
-                listener.AuthenticationSchemes = AuthenticationSchemes.Basic;
-            }
             foreach (string s in prefixes)
             {
                 listener.Prefixes.Add(s);
@@ -845,6 +936,16 @@ namespace MIG.Gateways
 
         #endregion
 
+        #region User Authentication
+
+        private User GetDefaultUser()
+        {
+            var user = users.FirstOrDefault(u => u.Realm == defaultUserRealm);
+            return user;
+        }
+        
+        #endregion
+        
         #region URL Aliases
 
         private void UrlAliasAdd(string alias)
@@ -896,11 +997,13 @@ namespace MIG.Gateways
             WebFile fileItem = new WebFile(), cachedItem = null;
             try
             {
-                cachedItem = filesCache.Find(wfc => wfc.FilePath == file);
+                lock (syncLock)
+                {
+                    cachedItem = filesCache.Find(wfc => wfc.FilePath == file);
+                }
             }
             catch (Exception ex)
             {
-                //TODO: sometimes the Find method fires an "object reference not set" error (who knows why???)
                 MigService.Log.Error(ex);
                 // clear possibly corrupted cache items
                 ClearWebCache();
@@ -917,7 +1020,8 @@ namespace MIG.Gateways
                     fileEncoding = defaultWebFileEncoding;
                 fileItem.Content = File.ReadAllText(file, fileEncoding);  //Encoding.UTF8.GetString(buffer, 0, buffer.Length);
                 fileItem.Encoding = fileEncoding;
-                if (cachedItem != null)
+                if (cachedItem == null) return fileItem;
+                lock (syncLock)
                 {
                     filesCache.Remove(cachedItem);
                 }
@@ -927,7 +1031,7 @@ namespace MIG.Gateways
 
         public void ClearWebCache()
         {
-            filesCache.Clear();
+            lock (syncLock) filesCache.Clear();
         }
 
         private Encoding DetectWebFileEncoding(string filename)
@@ -954,16 +1058,22 @@ namespace MIG.Gateways
 
         private void UpdateWebFileCache(string file, string content, Encoding encoding)
         {
-            var cachedItem = filesCache.Find(wfc => wfc.FilePath == file);
-            if (cachedItem == null)
+            lock (syncLock)
             {
-                cachedItem = new WebFile();
-                filesCache.Add(cachedItem);
+                var cachedItem = filesCache.Find(wfc => wfc.FilePath == file);
+                if (cachedItem == null)
+                {
+                    cachedItem = new WebFile();
+                    lock (syncLock)
+                    {
+                        filesCache.Add(cachedItem);
+                    }
+                }
+                cachedItem.FilePath = file;
+                cachedItem.Content = content;
+                cachedItem.Encoding = encoding;
+                cachedItem.IsCached = true;
             }
-            cachedItem.FilePath = file;
-            cachedItem.Content = content;
-            cachedItem.Encoding = encoding;
-            cachedItem.IsCached = true;
         }
 
         private string GetWebFilePath(string file)

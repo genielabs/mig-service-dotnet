@@ -4,19 +4,25 @@
 
 # MIG libray for .Net/Mono
 
-MIG is a .Net library providing an integrated solution for developing networked applications and real time web applications.
+MIG is a .Net library providing an integrated solution for developing networked applications
+and real time web applications.
 
 ## How it works
 
 We have two main actors in MIG: **Gateway** and **Interface**.
 
-A *Gateway* is the medium used for receiving API commands from the client and for transmitting responses and events back to it.
+A *Gateway* is the medium used for receiving API commands from the client and for transmitting
+responses and events back to it.
 
 An *Interface* is where all API commands are defined and related actions take place.
 
 So, when writing an application based on MIG, the developer will just focus on the *API* coding.
 
-Once the API commands are implemented, the application is ready to communicate with its clients through the desired **Gateway** medium. This can be a raw TCP socket server *(TcpSocketGateway)*, an HTTP server *(WebServiceGateway)*, a WebSocket server *(WebSocketGateway)*, a MQTT server *(MqttServiceGateway)* or even **ALL** of them at the same time, so to have a multi-protocol support for the application.
+Once the API commands are implemented, the application is ready to communicate with its clients
+through the desired **Gateway** medium. This can be a raw TCP socket server *(TcpSocketGateway)*,
+an HTTP server *(WebServiceGateway)*, a WebSocket server *(WebSocketGateway)*, a MQTT server
+*(MqttServiceGateway)* or even **ALL** of them at the same time, so to have a multi-protocol
+support for the application.
 
 Example code:
 ```csharp
@@ -92,7 +98,7 @@ Each gateway can be configured by using the *SetOption* method.
 Features
 
 - HTTP server with built-in support for SSE (Server Sent Events) stream (url **/events**)
-- Basic Authentication
+- Digest/Basic Authentication
 - Automatic Markdown files to HTML translation
 - File caching
 
@@ -102,8 +108,9 @@ Option List
 - HomePath (folder where to get HTML files from)
 - Host (host name or IP - use `*` for any)
 - Port (TCP port, default: *`80`*)
+- Authentication (`None`, `Digest` or `Basic`, default: `None`)
 - Username
-- Password
+- Password (authentication is disabled with empty password)
 - EnableFileCaching (*`True`* or *`False`*, default: *`False`*)
 - corsAllowOrigin (default: *`*`*)
 
@@ -128,12 +135,12 @@ web.SetOption("corsAllowOrigin", "");
 
 ### WebSocketGateway
 
-The Web Socket server is based on [WebSocketSharp](https://github.com/sta/websocket-sharp).
-See the project home page for informations about all supported features.
-
 Options
 
 - Port (TCP port to listen on)
+- Authentication (`None`, `Digest` or `Basic`, default: `None`)
+- Username
+- Password (authentication is disabled with empty password)
 
 Example
 ```csharp
@@ -154,8 +161,10 @@ A MIG Gateway for supporting the MQTT protocol will be available in future relea
 
 ## Interfaces 
 
-While in the earlier examples we used the **RegisterApi** method to dynamically add new API commands, these can also be added by using **Interface** plugins.
-Interface plugins are library modules (dll) that can be dinamically loaded into MIG. See [MIG.HomeAutomation](https://github.com/genielabs/mig-homeauto)
+While in the earlier examples we used the **RegisterApi** method to dynamically add new
+API commands, these can also be added by using **Interface** plugins.
+Interface plugins are library modules (dll) that can be dinamically loaded into MIG.
+See [MIG.HomeAutomation](https://github.com/genielabs/mig-homeauto)
 project source code for an example about how to create a MIG Interface plugin.
 
 Code for loading an Interface plugin:
@@ -165,8 +174,10 @@ var zwave = migService.AddInterface("HomeAutomation.ZWave", "MIG.HomeAutomation.
 // configure the serial port
 zwave.SetOption("Port", "/dev/ttyUSB0");
 ```
-The example above is used to load the *HomeAutomation.ZWave* Interface plugin into MIG. This will add a set of new API commands for controlling Z-Wave Home Automation hardware.
-For a list of currently available Interfaces and API, see the [MIG API](https://genielabs.github.io/HomeGenie/api/mig/mig_api_zwave.html) documentation page.
+The example above is used to load the *HomeAutomation.ZWave* Interface plugin into MIG.
+This will add a set of new API commands for controlling Z-Wave Home Automation hardware.
+For a list of currently available Interfaces and API, see the
+[MIG API](https://genielabs.github.io/HomeGenie/api/mig/mig_api_zwave.html) documentation page.
 
 ## Suggested syntax for API commands
 
@@ -174,7 +185,8 @@ For a list of currently available Interfaces and API, see the [MIG API](https://
 ```
 <api_domain>/<module_address>/<command>[/<option_0>/.../<option_n>]
 ```
-Where ```<api_domain>``` is used to address a specific API domain, ```<module_address>``` the target module of the API ```<command>```
+Where ```<api_domain>``` is used to address a specific API domain, ```<module_address>```
+the target module of the API ```<command>```
 and ```<option_0>...<option_n>``` are optional parameters that the ```<command>``` may require. 
 
 So in the previous example where we used the **RegisterApi** methods, we have:

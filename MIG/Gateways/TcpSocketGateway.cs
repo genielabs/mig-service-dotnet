@@ -23,7 +23,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 using MIG.Utility;
@@ -36,14 +35,10 @@ namespace MIG.Gateways
         private const int bufferLength = 1024;
 
         private TcpServerChannel server;
-        private int servicePort = 4502;
+        private int servicePort = 4502; // 4502 was chosen because it was accessible to Silverlight web apps
 
         public event PreProcessRequestEventHandler PreProcessRequest;
         public event PostProcessRequestEventHandler PostProcessRequest;
-
-        public TcpSocketGateway()
-        {
-        }
 
         public List<Option> Options { get; set; }
 
@@ -70,11 +65,7 @@ namespace MIG.Gateways
                 server.Connect(servicePort);
                 server.ChannelClientConnected += server_ChannelClientConnected;
                 server.ChannelClientDisconnected += server_ChannelClientDisconnected;
-                //_server.ChannelConnected += 
-                //_server.ChannelDisconnected += 
                 server.DataReceived += server_DataReceived;
-                //_server.DataSent += 
-                //_server.ExceptionOccurred += 
                 server.ExceptionOccurred += server_ExceptionOccurred;
                 success = true;
             }
@@ -89,11 +80,7 @@ namespace MIG.Gateways
         {
             server.ChannelClientConnected -= server_ChannelClientConnected;
             server.ChannelClientDisconnected -= server_ChannelClientDisconnected;
-            //_server.ChannelConnected -= 
-            //_server.ChannelDisconnected -= 
             server.DataReceived -= server_DataReceived;
-            //_server.DataSent -= 
-            //_server.ExceptionOccurred -= 
             server.ExceptionOccurred -= server_ExceptionOccurred;
             server.Disconnect();
         }
@@ -125,7 +112,7 @@ namespace MIG.Gateways
 
         private void server_ChannelClientDisconnected(object sender, ServerConnectionEventArgs args)
         {
-
+            // TODO: should auto-reconnect?
         }
 
         private void server_ExceptionOccurred(object sender, System.IO.ErrorEventArgs e)

@@ -35,6 +35,7 @@ namespace MIG.Gateways
     public const string HomePath = "HomePath";
     public const string Host = "Host";
     public const string Port = "Port";
+    public const string Authentication = "Authentication";
     public const string Username = "Username";
     public const string Password = "Password";
     public const string EnableFileCaching = "EnableFileCaching";
@@ -46,8 +47,16 @@ namespace MIG.Gateways
   public static class WebSocketGatewayOptions
   {
     public const string Port = "Port";
+    public const string Authentication = "Authentication";
     public const string Username = "Username";
     public const string Password = "Password";
+  }
+
+  public static class WebAuthenticationSchema
+  {
+    public const string Basic = "Basic";
+    public const string Digest = "Digest";
+    public const string None = "None";
   }
 
 }

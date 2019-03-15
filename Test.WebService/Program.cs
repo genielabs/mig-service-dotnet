@@ -40,7 +40,7 @@ namespace Test.WebService
             string webSocketPort = "8181";
 
             string authUser = "admin";
-            string authPass = "test"; // auth is disabled with empty password
+            string authPass = ""; // auth is disabled with empty password
 
             Log.Info("MigService test APP");
             Log.Info("URL: http://localhost:{0}", webServicePort);
@@ -53,15 +53,24 @@ namespace Test.WebService
             web.SetOption(WebServiceGatewayOptions.BaseUrl, "/pages/");
             web.SetOption(WebServiceGatewayOptions.Host, "*");
             web.SetOption(WebServiceGatewayOptions.Port, webServicePort);
-            web.SetOption(WebServiceGatewayOptions.Username, authUser);
-            web.SetOption(WebServiceGatewayOptions.Password, authPass);
+            //web.SetOption(WebServiceGatewayOptions.Authentication, WebAuthenticationSchema.Digest);
+            //web.SetOption(WebServiceGatewayOptions.Authentication, WebAuthenticationSchema.Basic);
+            //((WebServiceGateway) web).BasicAuthenticationHandler += (sender, eventArgs) =>
+            //{
+            //    var user = eventArgs.UserData;
+            //    return (user.Name == eventArgs.Username && user.Password == eventArgs.Password)
+            //};
+            //web.SetOption(WebServiceGatewayOptions.Username, authUser);
+            //web.SetOption(WebServiceGatewayOptions.Password, authPass);
             web.SetOption(WebServiceGatewayOptions.EnableFileCaching, "False");
 
             // Add and configure the WebSocket gateway
             var ws = migService.AddGateway(Gateway.WebSocketGateway);
             ws.SetOption(WebSocketGatewayOptions.Port, webSocketPort);
-            ws.SetOption(WebSocketGatewayOptions.Username, authUser);
-            ws.SetOption(WebSocketGatewayOptions.Password, authPass);
+            //ws.SetOption(WebSocketGatewayOptions.Authentication, WebAuthenticationSchema.Digest);
+            //ws.SetOption(WebSocketGatewayOptions.Authentication, WebAuthenticationSchema.Basic);
+            //ws.SetOption(WebSocketGatewayOptions.Username, authUser);
+            //ws.SetOption(WebSocketGatewayOptions.Password, authPass);
 
             migService.StartService();
 
