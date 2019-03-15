@@ -110,7 +110,7 @@ Option List
 - Port (TCP port, default: *`80`*)
 - Authentication (`None`, `Digest` or `Basic`, default: `None`)
 - Username
-- Password (authentication is disabled with empty password)
+- Password
 - EnableFileCaching (*`True`* or *`False`*, default: *`False`*)
 - corsAllowOrigin (default: *`*`*)
 
@@ -125,8 +125,8 @@ web.SetOption("BaseUrl", "/pages/");
 web.SetOption("Host", "*"); 
 // TCP port
 web.SetOption("Port", "8080");
-// disable authentication
-web.SetOption("Password", ""); 
+// enable authentication
+web.SetOption("Authentication", "Digest"); 
 // disable file caching
 web.SetOption("EnableFileCaching", "False"); 
 // disable CORS
@@ -140,7 +140,7 @@ Options
 - Port (TCP port to listen on)
 - Authentication (`None`, `Digest` or `Basic`, default: `None`)
 - Username
-- Password (authentication is disabled with empty password)
+- Password
 
 Example
 ```csharp

@@ -40,7 +40,7 @@ namespace Test.WebService
             string webSocketPort = "8181";
 
             string authUser = "admin";
-            string authPass = ""; // auth is disabled with empty password
+            string authPass = "test"; // auth is disabled with empty password
 
             Log.Info("MigService test APP");
             Log.Info("URL: http://localhost:{0}", webServicePort);
