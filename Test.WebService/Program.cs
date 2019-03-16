@@ -21,6 +21,7 @@ using System.Threading;
 
 using MIG;
 using MIG.Gateways;
+using MIG.Gateways.Authentication;
 
 namespace Test.WebService
 {
@@ -29,6 +30,7 @@ namespace Test.WebService
         public const string Echo = "echo";
         public const string Ping = "ping";
         public const string Greet = "greet";
+        public const string Token = "token";
     }
     
     class MainClass
@@ -40,7 +42,8 @@ namespace Test.WebService
             string webSocketPort = "8181";
 
             string authUser = "admin";
-            string authPass = "test"; // auth is disabled with empty password
+            string authRealm = "MIG Secure Zone";
+            string authPass = "password";
 
             Log.Info("MigService test APP");
             Log.Info("URL: http://localhost:{0}", webServicePort);
@@ -48,29 +51,51 @@ namespace Test.WebService
             var migService = new MigService();
 
             // Add and configure the WebService gateway
-            var web = migService.AddGateway(Gateways.WebServiceGateway);
+            var web = (WebServiceGateway)migService.AddGateway(Gateways.WebServiceGateway);
             web.SetOption(WebServiceGatewayOptions.HomePath, "html");
             web.SetOption(WebServiceGatewayOptions.BaseUrl, "/pages/");
             web.SetOption(WebServiceGatewayOptions.Host, "*");
             web.SetOption(WebServiceGatewayOptions.Port, webServicePort);
-            //web.SetOption(WebServiceGatewayOptions.Authentication, WebAuthenticationSchema.Digest);
-            //web.SetOption(WebServiceGatewayOptions.Authentication, WebAuthenticationSchema.Basic);
-            //((WebServiceGateway) web).BasicAuthenticationHandler += (sender, eventArgs) =>
-            //{
-            //    var user = eventArgs.UserData;
-            //    return (user.Name == eventArgs.Username && user.Password == eventArgs.Password);
-            //};
-            //web.SetOption(WebServiceGatewayOptions.Username, authUser);
-            //web.SetOption(WebServiceGatewayOptions.Password, authPass);
+            if (!String.IsNullOrEmpty(authUser) && !String.IsNullOrEmpty(authPass))
+            {
+                //web.SetOption(WebServiceGatewayOptions.Authentication, WebAuthenticationSchema.Basic);
+                web.SetOption(WebServiceGatewayOptions.Authentication, WebAuthenticationSchema.Digest);
+                web.SetOption(WebServiceGatewayOptions.AuthenticationRealm, authRealm);
+                web.UserAuthenticationHandler += (sender, eventArgs) =>
+                {
+                    if (eventArgs.Username == authUser)
+                    {
+                        // WebServiceGateway requires password to be encrypted using the `Digest.CreatePassword(..)` method.
+                        // This applies both to 'Digest' and 'Basic' authentication methods.
+                        string password = Digest.CreatePassword(authUser, authRealm, authPass);
+                        return new User(authUser, authRealm, password);
+                    }
+                    return null;
+                };
+            }
             web.SetOption(WebServiceGatewayOptions.EnableFileCaching, "False");
 
             // Add and configure the WebSocket gateway
-            var ws = migService.AddGateway(Gateways.WebSocketGateway);
+            var ws = (WebSocketGateway)migService.AddGateway(Gateways.WebSocketGateway);
             ws.SetOption(WebSocketGatewayOptions.Port, webSocketPort);
-            //ws.SetOption(WebSocketGatewayOptions.Authentication, WebAuthenticationSchema.Digest);
-            //ws.SetOption(WebSocketGatewayOptions.Authentication, WebAuthenticationSchema.Basic);
-            //ws.SetOption(WebSocketGatewayOptions.Username, authUser);
-            //ws.SetOption(WebSocketGatewayOptions.Password, authPass);
+            // WebSocketGateway access via authorization token
+            ws.SetOption(WebSocketGatewayOptions.Authentication, WebAuthenticationSchema.Token);
+            /*
+            if (!String.IsNullOrEmpty(authUser) && !String.IsNullOrEmpty(authPass))
+            {
+                //ws.SetOption(WebSocketGatewayOptions.Authentication, WebAuthenticationSchema.Basic);
+                ws.SetOption(WebSocketGatewayOptions.Authentication, WebAuthenticationSchema.Digest);
+                ws.SetOption(WebSocketGatewayOptions.AuthenticationRealm, authRealm);
+                ((WebSocketGateway) ws).UserAuthenticationHandler += (sender, eventArgs) =>
+                {
+                    if (eventArgs.Username == authUser)
+                    {
+                        return new User(authUser, authRealm, authPass);
+                    }
+                    return null;
+                };
+            }
+            */
 
             migService.StartService();
 
@@ -90,6 +115,10 @@ namespace Test.WebService
 
                 switch (cmd.Command)
                 {
+                case ApiCommands.Token:
+                    // authorization token will expire in 5 seconds
+                    var token = ws.GetAuthorizationToken(5);
+                    return new ResponseText(token.Value);
                 case ApiCommands.Greet:
                     var name = cmd.GetOption(0);
                     migService.RaiseEvent(

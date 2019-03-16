@@ -39,40 +39,11 @@ using CommonMark;
 using MIG.Config;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
-using System.Xml;
 
-using WebSocketSharp;
+using MIG.Gateways.Authentication;
 
 namespace MIG.Gateways
 {
-    public class User
-    {
-        public User(string name, string realm, string password)
-        {
-            Name = name;
-            Realm = realm;
-            Password = password;;
-        }
-        public readonly string Name;
-        public readonly string Realm;
-        public string Password;
-    }
-
-    public class BasicAuthenticationEventArgs
-    {
-        /// <summary>
-        /// HTTP authentication user name provided by the client.
-        /// </summary>
-        public string Username { get; internal set; }
-        /// <summary>
-        /// HTTP authentication password provided by the client.
-        /// </summary>
-        public string Password { get; internal set; }
-        /// <summary>
-        /// Actual user data to verify provided HTTP credentials.
-        /// </summary>
-        public User UserData { get; internal set; }
-    }
 
     class SseEvent
     {
@@ -121,6 +92,7 @@ namespace MIG.Gateways
         public event PreProcessRequestEventHandler PreProcessRequest;
         public event PostProcessRequestEventHandler PostProcessRequest;
         //private event InterfacePropertyChangedEventHandler PropertyChanged;
+        public event UserAuthenticationEventHandler UserAuthenticationHandler;
 
         // Concurrency
         private readonly ManualResetEvent stopEvent = new ManualResetEvent(false);
@@ -131,18 +103,10 @@ namespace MIG.Gateways
         private string homePath = "html";
         private string serviceHost = "*";
         private string servicePort = "8080";
-        private string serviceUsername = "admin";
-        private string servicePassword = "";
         private string corsAllowOrigin = "*";
         private bool enableFileCache;
         private string authenticationSchema = WebAuthenticationSchema.None;
-
-        // Authentication
-        private const string defaultUserRealm = "user@default";
-        private const string digestAuthorizationHeader = "Digest realm=\"" + defaultUserRealm + "\", qop=\"auth\", nonce=\"{0}\", opaque=\"{1}\"";
-        private readonly List<User> users = new List<User>();
-        public delegate bool BasicAuthenticationEventHandler(object sender, BasicAuthenticationEventArgs e);
-        public event BasicAuthenticationEventHandler BasicAuthenticationHandler;
+        private string authenticationRealm = "MIG Secure Zone";
 
         private readonly Encoding defaultWebFileEncoding = Encoding.GetEncoding("UTF-8");
 
@@ -185,11 +149,8 @@ namespace MIG.Gateways
                     authenticationSchema = option.Value;
                 }
                 break;
-            case WebServiceGatewayOptions.Username:
-                serviceUsername = option.Value;
-                break;
-            case WebServiceGatewayOptions.Password:
-                servicePassword = option.Value;
+            case WebServiceGatewayOptions.AuthenticationRealm:
+                authenticationRealm = option.Value;
                 break;
             case WebServiceGatewayOptions.EnableFileCaching:
                 ClearWebCache();
@@ -205,16 +166,6 @@ namespace MIG.Gateways
                 else if (option.Name.StartsWith(WebServiceGatewayOptions.UrlAliasPrefix))
                     UrlAliasAdd(option.Value);
                 break;
-            }
-            if (!serviceUsername.IsNullOrEmpty())
-            {
-                var user = users.FirstOrDefault(u => u.Realm == defaultUserRealm);
-                if (user != null)
-                {
-                    users.Remove(user);
-                }
-                user = new User(serviceUsername, defaultUserRealm, servicePassword);
-                users.Add(user);
             }
         }
 
@@ -329,8 +280,7 @@ namespace MIG.Gateways
                     //
                     if (requestHasAuthorizationHeader)
                     {
-                        var user = GetDefaultUser();
-                        //identity = (HttpListenerBasicIdentity)context.User.Identity;
+                        // identity = (HttpListenerBasicIdentity)context.User.Identity;
                         // authuser = identity.Name;
                         // authpass = identity.Password;
                         string[] authorizationParts = request.Headers["Authorization"].Split(' ');
@@ -339,42 +289,40 @@ namespace MIG.Gateways
                         {
                             byte[] encodedDataAsBytes = Convert.FromBase64String(authorizationParts[1]);
                             string authorizationToken = Encoding.UTF8.GetString(encodedDataAsBytes);
-                            var authUser = authorizationToken.Split(':')[0];
-                            var authPass = authorizationToken.Split(':')[1];
-                            if (BasicAuthenticationHandler != null)
-                            {
-                                var args = new BasicAuthenticationEventArgs();
-                                args.Username = authUser;
-                                args.Password = authPass;
-                                args.UserData = user;
-                                verified = OnBasicAuthentication(args);
-                            }
-                            else if (user.Name == authUser && user.Password == authPass)
+                            var username = authorizationToken.Split(':')[0];
+                            var password = authorizationToken.Split(':')[1];
+                            var user = OnUserAuthentication(new UserAuthenticationEventArgs(username));
+                            // Also `user.Password` must be encrypted using the `Digest.CreatePassword(..)` method,
+                            // otherwise authentication will fail
+                            password = Digest.CreatePassword(username, user.Realm, password);
+                            if (user != null && user.Name == username && user.Password == password)
                             {
                                 verified = true;
                             }
                         }
                         else if (authorizationSchema == WebAuthenticationSchema.Digest)
                         {
-                            if (user != null)
+                            int digestIndex = request.Headers["Authorization"].IndexOf(WebAuthenticationSchema.Digest + " ");
+                            string digestParameters = request.Headers["Authorization"].Substring(digestIndex + 7);
+                            try
                             {
-                                int digestIndex = request.Headers["Authorization"].IndexOf(WebAuthenticationSchema.Digest + " ");
-                                string digestParameters = request.Headers["Authorization"].Substring(digestIndex + 7);
-                                try
+                                Dictionary<string, string> parameters = digestParameters.Split(',')
+                                    .Select(value => value.Split('='))
+                                    .ToDictionary(kv => kv[0].Trim(new char[] {' ', '"'}),
+                                        kv => kv[1].Trim(new char[] {' ', '"'}));
+                                string username = parameters["username"];
+                                string uri = parameters["uri"];
+                                string nonce = parameters["nonce"];
+                                string nc = parameters["nc"];
+                                string cnonce = parameters["cnonce"];
+                                string qop = parameters["qop"];
+                                string responseHash = parameters["response"];
+
+                                var user = OnUserAuthentication(new UserAuthenticationEventArgs(username));
+                                if (user != null)
                                 {
-                                    Dictionary<string, string> parameters = digestParameters.Split(',')
-                                        .Select(value => value.Split('='))
-                                        .ToDictionary(kv => kv[0].Trim(new char[] {' ', '"'}),
-                                            kv => kv[1].Trim(new char[] {' ', '"'}));
-                                    string uri = parameters["uri"];
-                                    string nonce = parameters["nonce"];
-                                    string nc = parameters["nc"];
-                                    string cnonce = parameters["cnonce"];
-                                    string qop = parameters["qop"];
-                                    string responseHash = parameters["response"];
                                     // calculate verification hash
-                                    string a1 = Utility.Encryption.MD5Core
-                                        .GetHashString(user.Name + ":" + user.Realm + ":" + user.Password).ToLower();
+                                    string a1 = user.Password; // provided password must be encrypted using the `Digest.CreatePassword(..)` method.
                                     string a2 = Utility.Encryption.MD5Core.GetHashString(request.HttpMethod + ":" + uri)
                                         .ToLower();
                                     string verificationHash = Utility.Encryption.MD5Core
@@ -387,10 +335,10 @@ namespace MIG.Gateways
                                         verified = true;
                                     }
                                 }
-                                catch (Exception e)
-                                {
-                                    MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod, e));
-                                }
+                            }
+                            catch (Exception e)
+                            {
+                                MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod, e));
                             }
                         }
                         else
@@ -707,11 +655,12 @@ namespace MIG.Gateways
 
         private void RequestAuthentication(HttpListenerResponse response)
         {
+            const string digestAuthorizationHeader = "Digest realm=\"{0}\", qop=\"auth\", nonce=\"{1}\", opaque=\"{2}\"";
             if (authenticationSchema == WebAuthenticationSchema.Digest)
             {
                 string nonce = Guid.NewGuid().ToString();
                 string opaque = Guid.NewGuid().ToString();
-                string header = String.Format(digestAuthorizationHeader, nonce, opaque);
+                string header = String.Format(digestAuthorizationHeader, authenticationRealm, nonce, opaque);
                 response.AddHeader("WWW-Authenticate", header);
             }
             else
@@ -719,7 +668,7 @@ namespace MIG.Gateways
                 // this will only work in Linux (mono)
                 //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
                 // this works both on Linux and Windows
-                response.AddHeader("WWW-Authenticate", "Basic realm=\"" + defaultUserRealm + "\"");
+                response.AddHeader("WWW-Authenticate", "Basic realm=\"" + authenticationRealm + "\"");
             }
         }
 
@@ -926,16 +875,6 @@ namespace MIG.Gateways
         }
 
         #endregion
-
-        #region User Authentication
-
-        private User GetDefaultUser()
-        {
-            var user = users.FirstOrDefault(u => u.Realm == defaultUserRealm);
-            return user;
-        }
-        
-        #endregion
         
         #region URL Aliases
 
@@ -1108,13 +1047,13 @@ namespace MIG.Gateways
                 PostProcessRequest(this, new ProcessRequestEventArgs(request));
         }
 
-        protected virtual bool OnBasicAuthentication(BasicAuthenticationEventArgs args)
+        protected virtual User OnUserAuthentication(UserAuthenticationEventArgs args)
         {
-            if (BasicAuthenticationHandler != null)
+            if (UserAuthenticationHandler != null)
             {
-                return BasicAuthenticationHandler(this, args);
+                return UserAuthenticationHandler(this, args);
             }
-            return false;
+            return null;
         }
         #endregion
 

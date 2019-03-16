@@ -23,20 +23,31 @@ evtSource.onmessage = function(e) {
     var newElement = document.createElement("li");
     newElement.innerHTML = "HTTP SSE: " + e.data;
     document.getElementById('eventList').appendChild(newElement);
-}
+};
 
 // Listen for WebSocket events
-var exampleSocket = new WebSocket("ws://localhost:8181/events");
-exampleSocket.onmessage = function (e) {
-    var newElement = document.createElement("li");
-    newElement.innerHTML = "WebSocket: " + e.data;
-    document.getElementById('eventList').appendChild(newElement);
-}
+var webSocket = {};
+fetch('/api/myapp/demo/token').then(function(response) {
+    return response.json();
+}).then(function(data) {
+    console.log(data);
+    webSocket = new WebSocket("ws://localhost:8181/events?at="+data.ResponseValue);
+    webSocket.onmessage = function (e) {
+        var newElement = document.createElement("li");
+        newElement.innerHTML = "WebSocket: " + e.data;
+        document.getElementById('eventList').appendChild(newElement);
+    };
+}).catch(function() {
+    // TODO: ..
+});
 
 // Send a command though web socket
 setInterval(function(){
     // Send a request using Web Socket
-    exampleSocket.send("myapp/demo/echo/Hello+World");
+    if (webSocket.readyState == 1)
+    {
+        webSocket.send("myapp/demo/echo/Hello+World");
+    }
     // Send a request using standard HTTP
     $.get('/api/myapp/demo/ping', function(res){
         console.log(res);

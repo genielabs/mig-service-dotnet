@@ -23,8 +23,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using MIG.Config;
+using MIG.Gateways.Authentication;
 
 using WebSocketSharp;
 using WebSocketSharp.Net;
@@ -36,14 +38,24 @@ namespace MIG.Gateways
     public class MigWsServer : WebSocketBehavior
     {
         private WebSocketGateway gateway;
-
         public MigWsServer(WebSocketGateway gw) : base()
         {
             gateway = gw;
         }
 
+        protected override void OnOpen()
+        {
+            base.OnOpen();
+            var token = Context.QueryString.Get("at");
+            if (!gateway.IsAuthorized(token))
+            {
+                Context.WebSocket.Close();
+            }
+        }
+
         protected override void OnMessage(MessageEventArgs args)
         {
+            base.OnMessage(args);
             gateway.ProcessRequest(args);
         }
     }
@@ -52,13 +64,14 @@ namespace MIG.Gateways
     {
         public event PreProcessRequestEventHandler PreProcessRequest;
         public event PostProcessRequestEventHandler PostProcessRequest;
+        public event UserAuthenticationEventHandler UserAuthenticationHandler;
 
         private WebSocketServer webSocketServer;
+        private List<AuthorizationToken> authorizationTokens = new List<AuthorizationToken>();
+        
         private int servicePort = 8181;
-
         private string authenticationSchema = WebAuthenticationSchema.None;
-        private string serviceUsername = "admin";
-        private string servicePassword = "";
+        private string authenticationRealm = "MIG Secure Zone";
 
         public WebSocketGateway()
         {
@@ -74,16 +87,13 @@ namespace MIG.Gateways
                     int.TryParse(option.Value, out servicePort);
                     break;
                 case WebSocketGatewayOptions.Authentication:
-                    if (option.Value == WebAuthenticationSchema.Basic || option.Value == WebAuthenticationSchema.Digest)
+                    if (option.Value == WebAuthenticationSchema.Token || option.Value == WebAuthenticationSchema.Basic || option.Value == WebAuthenticationSchema.Digest)
                     {
                         authenticationSchema = option.Value;
                     }                    
                     break;
-                case WebSocketGatewayOptions.Username:
-                    serviceUsername = option.Value;
-                    break;
-                case WebSocketGatewayOptions.Password:
-                    servicePassword = option.Value;
+                case WebServiceGatewayOptions.AuthenticationRealm:
+                    authenticationRealm = option.Value;
                     break;
             }
         }
@@ -92,7 +102,7 @@ namespace MIG.Gateways
         {
             if (webSocketServer.IsListening)
             {
-                webSocketServer.WebSocketServices.Broadcast(MigService.JsonSerialize(args.EventData));
+                webSocketServer.WebSocketServices.BroadcastAsync(MigService.JsonSerialize(args.EventData), () => {});
             }
         }
 
@@ -107,13 +117,17 @@ namespace MIG.Gateways
                     // To ignore the extensions requested from a client.
                     IgnoreExtensions = true
                 });
-                if (authenticationSchema != WebAuthenticationSchema.None)
+                if (authenticationSchema != WebAuthenticationSchema.None && authenticationSchema != WebAuthenticationSchema.Token)
                 {
                     webSocketServer.AuthenticationSchemes = (authenticationSchema == WebAuthenticationSchema.Basic) ? AuthenticationSchemes.Basic : AuthenticationSchemes.Digest;
-                    webSocketServer.Realm = "user@default";
-                    webSocketServer.UserCredentialsFinder = id => id.Name == serviceUsername
-                        ? new NetworkCredential (serviceUsername, servicePassword)
-                        : null;
+                    webSocketServer.Realm = authenticationRealm;
+                    webSocketServer.UserCredentialsFinder = (id) =>
+                    {
+                        var user = OnUserAuthentication(new UserAuthenticationEventArgs(id.Name));
+                        if (user != null)
+                            return new NetworkCredential(user.Name, user.Password, user.Realm);
+                        return null;
+                    };
                 }
                 webSocketServer.Start();
                 success = true;
@@ -143,6 +157,23 @@ namespace MIG.Gateways
                 OnPostProcessRequest(migRequest);
         }
 
+        public bool IsAuthorized(string token)
+        {
+            if (authenticationSchema != WebAuthenticationSchema.Token)
+                return true;
+            var t = authorizationTokens.Find(at => at.Value == token);
+            if (t != null) authorizationTokens.Remove(t);
+            return t != null && !t.IsExpired;
+        }
+
+        public AuthorizationToken GetAuthorizationToken(double expireSeconds)
+        {
+            var token = new AuthorizationToken(expireSeconds);
+            authorizationTokens.RemoveAll(t => t.IsExpired);
+            authorizationTokens.Add(token);
+            return token;
+        }
+
         protected virtual void OnPreProcessRequest(MigClientRequest request)
         {
             if (request != null && PreProcessRequest != null)
@@ -153,6 +184,14 @@ namespace MIG.Gateways
         {
             if (request != null && PostProcessRequest != null)
                 PostProcessRequest(this, new ProcessRequestEventArgs(request));
+        }
+        protected virtual User OnUserAuthentication(UserAuthenticationEventArgs args)
+        {
+            if (UserAuthenticationHandler != null)
+            {
+                return UserAuthenticationHandler(this, args);
+            }
+            return null;
         }
     }
 }

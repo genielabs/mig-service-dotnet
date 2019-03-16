@@ -67,6 +67,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Gateways\Defs.cs" />
+    <Compile Include="Gateways\Authentication.cs" />
     <Compile Include="Gateways\WebServiceUtility.cs" />
     <Compile Include="Gateways\TcpSocketGateway.cs" />
     <Compile Include="Gateways\WebServiceGateway.cs" />

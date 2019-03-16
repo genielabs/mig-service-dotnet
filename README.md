@@ -109,8 +109,7 @@ Option List
 - Host (host name or IP - use `*` for any)
 - Port (TCP port, default: *`80`*)
 - Authentication (`None`, `Digest` or `Basic`, default: `None`)
-- Username
-- Password
+- AuthenticationRealm (The authentication realm, default: `MIG Secure Zone`)
 - EnableFileCaching (*`True`* or *`False`*, default: *`False`*)
 - corsAllowOrigin (default: *`*`*)
 
@@ -138,14 +137,25 @@ web.SetOption(WebServiceGatewayOptions.CorsAllowOrigin, "");
 Options
 
 - Port (TCP port to listen on)
-- Authentication (`None`, `Digest` or `Basic`, default: `None`)
-- Username
-- Password
+- Authentication (`None`, `Token`, `Digest` or `Basic`, default: `None`)
+- AuthenticationRealm (The authentication realm, default: `MIG Secure Zone`)
 
 Example
 ```csharp
 var ws = migService.AddGateway(Gateways.WebSocketGateway);
 ws.SetOption(WebSocketGatewayOptions.Port, "8181");
+```
+
+Methods
+
+`ws.GetAuthorizationToken(expireSeconds)`
+Request a token to connect when `Authentication` is set to `Token` authentication schema.
+In order to be granted access, the connecting client must pass the obtained token as the
+`at` query string parameter.
+
+```js
+// connecting using an authorization token
+var webSocket = new WebSocket("ws://"+ws_address+"/events?at="+token);
 ```
 
 ### TcpSocketGateway

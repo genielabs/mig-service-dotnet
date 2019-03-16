@@ -41,8 +41,7 @@ namespace MIG.Gateways
     public const string Host = "Host";
     public const string Port = "Port";
     public const string Authentication = "Authentication";
-    public const string Username = "Username";
-    public const string Password = "Password";
+    public const string AuthenticationRealm = "AuthenticationRealm";
     public const string EnableFileCaching = "EnableFileCaching";
     public const string CorsAllowOrigin = "CorsAllowOrigin";
     public const string HttpCacheIgnorePrefix = "HttpCacheIgnore.";
@@ -53,20 +52,12 @@ namespace MIG.Gateways
   {
     public const string Port = "Port";
     public const string Authentication = "Authentication";
-    public const string Username = "Username";
-    public const string Password = "Password";
+    public const string AuthenticationRealm = "AuthenticationRealm";
   }
 
   public static class TcpSocketGatewayOptions
   {
     public const string Port = "Port";
-  }
-
-  public static class WebAuthenticationSchema
-  {
-    public const string Basic = "Basic";
-    public const string Digest = "Digest";
-    public const string None = "None";
   }
 
 }
