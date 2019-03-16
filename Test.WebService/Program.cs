@@ -48,7 +48,7 @@ namespace Test.WebService
             var migService = new MigService();
 
             // Add and configure the WebService gateway
-            var web = migService.AddGateway(Gateway.WebServiceGateway);
+            var web = migService.AddGateway(Gateways.WebServiceGateway);
             web.SetOption(WebServiceGatewayOptions.HomePath, "html");
             web.SetOption(WebServiceGatewayOptions.BaseUrl, "/pages/");
             web.SetOption(WebServiceGatewayOptions.Host, "*");
@@ -58,14 +58,14 @@ namespace Test.WebService
             //((WebServiceGateway) web).BasicAuthenticationHandler += (sender, eventArgs) =>
             //{
             //    var user = eventArgs.UserData;
-            //    return (user.Name == eventArgs.Username && user.Password == eventArgs.Password)
+            //    return (user.Name == eventArgs.Username && user.Password == eventArgs.Password);
             //};
             //web.SetOption(WebServiceGatewayOptions.Username, authUser);
             //web.SetOption(WebServiceGatewayOptions.Password, authPass);
             web.SetOption(WebServiceGatewayOptions.EnableFileCaching, "False");
 
             // Add and configure the WebSocket gateway
-            var ws = migService.AddGateway(Gateway.WebSocketGateway);
+            var ws = migService.AddGateway(Gateways.WebSocketGateway);
             ws.SetOption(WebSocketGatewayOptions.Port, webSocketPort);
             //ws.SetOption(WebSocketGatewayOptions.Authentication, WebAuthenticationSchema.Digest);
             //ws.SetOption(WebSocketGatewayOptions.Authentication, WebAuthenticationSchema.Basic);

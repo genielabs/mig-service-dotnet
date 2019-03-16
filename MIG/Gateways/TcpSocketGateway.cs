@@ -44,7 +44,7 @@ namespace MIG.Gateways
 
         public void OnSetOption(Option option)
         {
-            if (option.Name.Equals("Port"))
+            if (option.Name.Equals(TcpSocketGatewayOptions.Port))
             {
                 int.TryParse(option.Value, out servicePort);
             }

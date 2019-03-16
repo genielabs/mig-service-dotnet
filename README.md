@@ -29,10 +29,10 @@ Example code:
 var migService = new MigService();
 
 // Add Web Server gateway
-var webServiceGw = migService.AddGateway("WebServiceGateway");
+var webServiceGw = migService.AddGateway(Gateways.WebServiceGateway);
 
 // Add Web Socket gateway
-var webSocketGw = migService.AddGateway("WebSocketGateway");
+var webSocketGw = migService.AddGateway(Gateways.WebSocketGateway);
 
 // Define an API handler for myapp/demo/greet command
 migService.RegisterApi("myapp/demo/greet", (request)=>{
@@ -116,21 +116,21 @@ Option List
 
 Example
 ```csharp
-var web = migService.AddGateway("WebServiceGateway");
+var web = migService.AddGateway(Gateways.WebServiceGateway);
 // HTML files folder 
-web.SetOption("HomePath", "html");
+web.SetOption(WebServiceGatewayOptions.HomePath, "html");
 // base URL for html files
-web.SetOption("BaseUrl", "/pages/"); 
+web.SetOption(WebServiceGatewayOptions.BaseUrl, "/pages/"); 
 // listen on any address
-web.SetOption("Host", "*"); 
+web.SetOption(WebServiceGatewayOptions.Host, "*"); 
 // TCP port
-web.SetOption("Port", "8080");
+web.SetOption(WebServiceGatewayOptions.Port, "8080");
 // enable authentication
-web.SetOption("Authentication", "Digest"); 
+web.SetOption(WebServiceGatewayOptions.Authentication, "Digest"); 
 // disable file caching
-web.SetOption("EnableFileCaching", "False"); 
+web.SetOption(WebServiceGatewayOptions.EnableFileCaching, "False"); 
 // disable CORS
-web.SetOption("corsAllowOrigin", ""); 
+web.SetOption(WebServiceGatewayOptions.CorsAllowOrigin, ""); 
 ```
 
 ### WebSocketGateway
@@ -144,8 +144,8 @@ Options
 
 Example
 ```csharp
-var ws = migService.AddGateway("WebSocketGateway");
-ws.SetOption("Port", "8181");
+var ws = migService.AddGateway(Gateways.WebSocketGateway);
+ws.SetOption(WebSocketGatewayOptions.Port, "8181");
 ```
 
 ### TcpSocketGateway
@@ -157,7 +157,9 @@ Options
 
 ### MqttServiceGateway
 
-A MIG Gateway for supporting the MQTT protocol will be available in future releases.
+A MIG Gateway for supporting the MQTT protocol will be integrated in future releases.
+In the meantime a simple MQTT broker implementation is available as a *MIG Interface*
+from [this repository](https://github.com/genielabs/mig-protocols-mqttbroker).
 
 ## Interfaces 
 

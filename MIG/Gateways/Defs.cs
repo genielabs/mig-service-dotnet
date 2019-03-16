@@ -23,10 +23,15 @@
 
 namespace MIG.Gateways
 {
-  public static class Gateway
+  /// <summary>
+  /// Types of available MIG Gateways
+  /// </summary>
+  public static class Gateways
   {
     public const string WebServiceGateway = "WebServiceGateway";
     public const string WebSocketGateway = "WebSocketGateway";
+    public const string TcpSocketGateway = "TcpSocketGateway";
+    public const string MqttServiceGateway = "MqttServiceGateway";
   }
   
   public static class WebServiceGatewayOptions
@@ -50,6 +55,11 @@ namespace MIG.Gateways
     public const string Authentication = "Authentication";
     public const string Username = "Username";
     public const string Password = "Password";
+  }
+
+  public static class TcpSocketGatewayOptions
+  {
+    public const string Port = "Port";
   }
 
   public static class WebAuthenticationSchema

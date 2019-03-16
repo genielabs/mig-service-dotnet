@@ -51,19 +51,26 @@ namespace MIG.Gateways
         {
             Name = name;
             Realm = realm;
-            Password = password;
-            SHA1Password = Utility.Encryption.SHA1.GenerateHashString(password);
+            Password = password;;
         }
         public readonly string Name;
         public readonly string Realm;
         public string Password;
-        public string SHA1Password;
     }
 
     public class BasicAuthenticationEventArgs
     {
+        /// <summary>
+        /// HTTP authentication user name provided by the client.
+        /// </summary>
         public string Username { get; internal set; }
+        /// <summary>
+        /// HTTP authentication password provided by the client.
+        /// </summary>
         public string Password { get; internal set; }
+        /// <summary>
+        /// Actual user data to verify provided HTTP credentials.
+        /// </summary>
         public User UserData { get; internal set; }
     }
 
@@ -136,14 +143,6 @@ namespace MIG.Gateways
         private readonly List<User> users = new List<User>();
         public delegate bool BasicAuthenticationEventHandler(object sender, BasicAuthenticationEventArgs e);
         public event BasicAuthenticationEventHandler BasicAuthenticationHandler;
-        protected virtual bool OnBasicAuthentication(BasicAuthenticationEventArgs args)
-        {
-            if (BasicAuthenticationHandler != null)
-            {
-                return BasicAuthenticationHandler(this, args);
-            }
-            return false;
-        }
 
         private readonly Encoding defaultWebFileEncoding = Encoding.GetEncoding("UTF-8");
 
@@ -671,39 +670,13 @@ namespace MIG.Gateways
                     else
                     {
                         response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                        if (authenticationSchema == WebAuthenticationSchema.Digest)
-                        {
-                            string nonce = Guid.NewGuid().ToString();
-                            string opaque = Guid.NewGuid().ToString();
-                            string header = String.Format(digestAuthorizationHeader, nonce, opaque);
-                            response.AddHeader("WWW-Authenticate", header);
-                        }
-                        else
-                        {
-                            // this will only work in Linux (mono)
-                            //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
-                            // this works both on Linux and Windows
-                            response.AddHeader("WWW-Authenticate", "Basic realm=\"" + defaultUserRealm + "\"");
-                        }
+                        RequestAuthentication(response);
                     }
                 }
                 else
                 {
                     response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                    if (authenticationSchema == WebAuthenticationSchema.Digest)
-                    {
-                        string nonce = Guid.NewGuid().ToString();
-                        string opaque = Guid.NewGuid().ToString();
-                        string header = String.Format(digestAuthorizationHeader, nonce, opaque);
-                        response.AddHeader("WWW-Authenticate", header);
-                    }
-                    else
-                    {
-                        // this will only work in Linux (mono)
-                        //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
-                        // this works both on Linux and Windows
-                        response.AddHeader("WWW-Authenticate", "Basic realm=\"" + defaultUserRealm + "\"");
-                    }
+                    RequestAuthentication(response);
                 }
                 MigService.Log.Info(new MigEvent(this.GetName(), remoteAddress, "HTTP", request.HttpMethod,
                     $"{response.StatusCode} {request.RawUrl}{logExtras}"));
@@ -732,6 +705,24 @@ namespace MIG.Gateways
             }
         }
 
+        private void RequestAuthentication(HttpListenerResponse response)
+        {
+            if (authenticationSchema == WebAuthenticationSchema.Digest)
+            {
+                string nonce = Guid.NewGuid().ToString();
+                string opaque = Guid.NewGuid().ToString();
+                string header = String.Format(digestAuthorizationHeader, nonce, opaque);
+                response.AddHeader("WWW-Authenticate", header);
+            }
+            else
+            {
+                // this will only work in Linux (mono)
+                //response.Headers.Set(HttpResponseHeader.WwwAuthenticate, "Basic");
+                // this works both on Linux and Windows
+                response.AddHeader("WWW-Authenticate", "Basic realm=\"" + defaultUserRealm + "\"");
+            }
+        }
+
         private void HandleEventsRoute(HttpListenerRequest request, HttpListenerResponse response, HttpListenerContext context,
             string remoteAddress)
         {
@@ -752,14 +743,14 @@ namespace MIG.Gateways
 
             DateTime lastTimeStamp = DateTime.UtcNow;
             var lastId = context.Request.Headers.Get("Last-Event-ID");
-            if (lastId == null || lastId == "")
+            if (string.IsNullOrEmpty(lastId))
             {
                 var queryValues = HttpUtility.ParseQueryString(context.Request.Url.Query);
                 lastId = queryValues.Get("lastEventId");
 
             }
 
-            if (lastId != null && lastId != "")
+            if (!string.IsNullOrEmpty(lastId))
             {
                 double unixTimestamp = 0;
                 double.TryParse(lastId, NumberStyles.Float | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture,
@@ -927,7 +918,7 @@ namespace MIG.Gateways
             {
                 if (c.RemoteEndPoint.ToString() == ep.ToString())
                 {
-                    isConnected = !(c.State == TcpState.CloseWait);
+                    isConnected = c.State != TcpState.CloseWait;
                     break;
                 }
             }
@@ -1117,6 +1108,14 @@ namespace MIG.Gateways
                 PostProcessRequest(this, new ProcessRequestEventArgs(request));
         }
 
+        protected virtual bool OnBasicAuthentication(BasicAuthenticationEventArgs args)
+        {
+            if (BasicAuthenticationHandler != null)
+            {
+                return BasicAuthenticationHandler(this, args);
+            }
+            return false;
+        }
         #endregion
 
     }
