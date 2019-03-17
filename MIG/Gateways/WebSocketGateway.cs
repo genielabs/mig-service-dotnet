@@ -37,8 +37,13 @@ namespace MIG.Gateways
 
     public class MigWsServer : WebSocketBehavior
     {
-        private WebSocketGateway gateway;
-        public MigWsServer(WebSocketGateway gw) : base()
+        private readonly WebSocketGateway gateway;
+
+        public MigWsServer()
+        {
+            
+        }
+        public MigWsServer(WebSocketGateway gw)
         {
             gateway = gw;
         }
@@ -49,7 +54,7 @@ namespace MIG.Gateways
             var token = Context.QueryString.Get("at");
             if (!gateway.IsAuthorized(token))
             {
-                Context.WebSocket.Close();
+                Context.WebSocket.Close(CloseStatusCode.ProtocolError, "Invalid token.");
             }
         }
 
@@ -100,9 +105,12 @@ namespace MIG.Gateways
 
         public void OnInterfacePropertyChanged(object sender, InterfacePropertyChangedEventArgs args)
         {
-            if (webSocketServer.IsListening)
+            if (webSocketServer != null && webSocketServer.IsListening)
             {
-                webSocketServer.WebSocketServices.BroadcastAsync(MigService.JsonSerialize(args.EventData), () => {});
+                WebSocketServiceHost host;
+                webSocketServer.WebSocketServices.TryGetServiceHost("/events", out host);
+                if (host == null) return;
+                host.Sessions.BroadcastAsync(MigService.JsonSerialize(args.EventData), () => {});
             }
         }
 
@@ -113,7 +121,7 @@ namespace MIG.Gateways
             {
                 Stop();
                 webSocketServer = new WebSocketServer(servicePort);
-                webSocketServer.AddWebSocketService("/events", () => new MigWsServer(this) {
+                webSocketServer.AddWebSocketService<MigWsServer>("/events", () => new MigWsServer(this) {
                     // To ignore the extensions requested from a client.
                     IgnoreExtensions = true
                 });
