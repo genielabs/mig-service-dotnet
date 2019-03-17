@@ -42,8 +42,8 @@ namespace Test.WebService
             string webSocketPort = "8181";
 
             string authUser = "admin";
-            string authRealm = "MIG Secure Zone";
             string authPass = "password";
+            string authRealm = "MIG Secure Zone";
 
             Log.Info("MigService test APP");
             Log.Info("URL: http://localhost:{0}", webServicePort);

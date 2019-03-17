@@ -132,6 +132,29 @@ web.SetOption(WebServiceGatewayOptions.EnableFileCaching, "False");
 web.SetOption(WebServiceGatewayOptions.CorsAllowOrigin, ""); 
 ```
 
+#### User authentication with `Digest` or `Basic` methods
+
+```
+string authReam = "My App Realm";
+web.SetOption(WebServiceGatewayOptions.Authentication, WebAuthenticationSchema.Digest);
+web.SetOption(WebServiceGatewayOptions.AuthenticationRealm, authRealm);
+web.UserAuthenticationHandler += (sender, eventArgs) =>
+{
+    // lookup 'eventArgs.Username' in your database
+    var user = GetUser(eventArgs.Username);
+    if (user != null)
+    {
+        // WebServiceGateway requires password to be encrypted using the `Digest.CreatePassword(..)` method.
+        // This applies both to 'Digest' and 'Basic' authentication methods.
+        // So if 'user.Password' is stored in clear (not recommended) it must be encrypted
+        string encryptedPassword = Digest.CreatePassword(user.Username, authRealm, user.Password);
+        // if 'user.Password' is already encrypted the previous line can be removed
+        return new User(user.Username, authRealm, encryptedPassword);
+    }
+    return null;
+};
+```
+
 ### WebSocketGateway
 
 Options
@@ -146,17 +169,41 @@ var ws = migService.AddGateway(Gateways.WebSocketGateway);
 ws.SetOption(WebSocketGatewayOptions.Port, "8181");
 ```
 
-Methods
+#### Authentication using Token
 
-`ws.GetAuthorizationToken(expireSeconds)`
-Request a token to connect when `Authentication` is set to `Token` authentication schema.
-In order to be granted access, the connecting client must pass the obtained token as the
-`at` query string parameter.
+When `Authentication` option is set to `Token`, the websocket service will require the client
+to connect by providing an authentication token in the url query-string as the `at` parameter.
+
+The authorization token is obtained by calling the following method
+
+```
+double expireSeconds = 5; // 5 seconds validity
+var token = ws.GetAuthorizationToken(expireSeconds);
+// ...
+```
+
+When the client is a browser, then `GetAuthorizationToken` can be exposed implementing a custom API method as shown in
+the included example application (Test.WebService).
+
+The following snippet from the example application shows how to request and use the token in JavaScript:
 
 ```js
-// connecting using an authorization token
-var webSocket = new WebSocket("ws://"+ws_address+"/events?at="+token);
+var webSocket;
+fetch('/api/myapp/demo/token').then(function(response) {
+    return response.json();
+}).then(function(data) {
+    var token = data.ResponseValue;
+    webSocket = new WebSocket("ws://localhost:8181/events?at="+token);
+    // ...
+}).catch(function() {
+    // ...
+});
 ```
+
+#### User authentication with `Digest` or `Basic` methods
+
+This is similar as seen for `WebServiceGateway` the only difference is that the password is not encrypted.
+
 
 ### TcpSocketGateway
 

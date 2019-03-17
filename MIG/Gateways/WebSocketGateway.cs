@@ -87,7 +87,7 @@ namespace MIG.Gateways
                     int.TryParse(option.Value, out servicePort);
                     break;
                 case WebSocketGatewayOptions.Authentication:
-                    if (option.Value == WebAuthenticationSchema.Token || option.Value == WebAuthenticationSchema.Basic || option.Value == WebAuthenticationSchema.Digest)
+                    if (option.Value == WebAuthenticationSchema.None || option.Value == WebAuthenticationSchema.Token || option.Value == WebAuthenticationSchema.Basic || option.Value == WebAuthenticationSchema.Digest)
                     {
                         authenticationSchema = option.Value;
                     }                    

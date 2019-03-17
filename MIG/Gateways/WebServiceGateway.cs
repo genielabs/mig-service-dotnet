@@ -144,7 +144,7 @@ namespace MIG.Gateways
                 servicePort = option.Value;
                 break;
             case WebServiceGatewayOptions.Authentication:
-                if (option.Value == WebAuthenticationSchema.Basic || option.Value == WebAuthenticationSchema.Digest)
+                if (option.Value == WebAuthenticationSchema.None || option.Value == WebAuthenticationSchema.Basic || option.Value == WebAuthenticationSchema.Digest)
                 {
                     authenticationSchema = option.Value;
                 }
@@ -306,10 +306,14 @@ namespace MIG.Gateways
                             string digestParameters = request.Headers["Authorization"].Substring(digestIndex + 7);
                             try
                             {
-                                Dictionary<string, string> parameters = digestParameters.Split(',')
-                                    .Select(value => value.Split('='))
-                                    .ToDictionary(kv => kv[0].Trim(new char[] {' ', '"'}),
-                                        kv => kv[1].Trim(new char[] {' ', '"'}));
+                                // parse digest parameters
+                                Regex regex = new Regex(@"([^,].*?)\s*=(\s*)([^,]+)", RegexOptions.Compiled);
+                                var matches = regex.Matches(digestParameters);
+                                var parameters = new Dictionary<string,string>();            
+                                foreach (Match match in matches) {
+                                    var keyValue = match.Value.Trim().Split(new[]{'='}, 2);
+                                    parameters.Add(keyValue[0], keyValue[1].Trim(new char[]{' ', ',', '"' }));
+                                }
                                 string username = parameters["username"];
                                 string uri = parameters["uri"];
                                 string nonce = parameters["nonce"];
@@ -317,7 +321,7 @@ namespace MIG.Gateways
                                 string cnonce = parameters["cnonce"];
                                 string qop = parameters["qop"];
                                 string responseHash = parameters["response"];
-
+                                // verify authorization
                                 var user = OnUserAuthentication(new UserAuthenticationEventArgs(username));
                                 if (user != null)
                                 {
@@ -346,8 +350,7 @@ namespace MIG.Gateways
                             throw new NotImplementedException(authorizationSchema);
                         }
                     }
-                    verified |= (authenticationSchema == WebAuthenticationSchema.None);
-                    if (verified)
+                    if (verified || authenticationSchema == WebAuthenticationSchema.None)
                     {
                         string url = request.RawUrl.TrimStart('/').TrimStart('\\').TrimStart('.');
                         if (url.IndexOf("?") > 0)

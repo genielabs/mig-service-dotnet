@@ -30,8 +30,8 @@ var webSocket = {};
 fetch('/api/myapp/demo/token').then(function(response) {
     return response.json();
 }).then(function(data) {
-    console.log(data);
-    webSocket = new WebSocket("ws://localhost:8181/events?at="+data.ResponseValue);
+    var token = data.ResponseValue;
+    webSocket = new WebSocket("ws://localhost:8181/events?at="+token);
     webSocket.onmessage = function (e) {
         var newElement = document.createElement("li");
         newElement.innerHTML = "WebSocket: " + e.data;
