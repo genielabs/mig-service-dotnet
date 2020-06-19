@@ -1,6 +1,6 @@
 ﻿/*
   This file is part of MIG (https://github.com/genielabs/mig-service-dotnet)
- 
+
   Copyright (2012-2018) G-Labs (https://github.com/genielabs)
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +41,7 @@ namespace MIG.Gateways
 
         public MigWsServer()
         {
-            
+
         }
         public MigWsServer(WebSocketGateway gw)
         {
@@ -73,7 +73,7 @@ namespace MIG.Gateways
 
         private WebSocketServer webSocketServer;
         private List<AuthorizationToken> authorizationTokens = new List<AuthorizationToken>();
-        
+
         private int servicePort = 8181;
         private string authenticationSchema = WebAuthenticationSchema.None;
         private string authenticationRealm = "MIG Secure Zone";
@@ -95,7 +95,7 @@ namespace MIG.Gateways
                     if (option.Value == WebAuthenticationSchema.None || option.Value == WebAuthenticationSchema.Token || option.Value == WebAuthenticationSchema.Basic || option.Value == WebAuthenticationSchema.Digest)
                     {
                         authenticationSchema = option.Value;
-                    }                    
+                    }
                     break;
                 case WebServiceGatewayOptions.AuthenticationRealm:
                     authenticationRealm = option.Value;
@@ -156,10 +156,10 @@ namespace MIG.Gateways
             }
         }
 
-        public void ProcessRequest(MessageEventArgs args)
+        public void ProcessRequest(MessageEventArgs message)
         {
-            var migContext = new MigContext(ContextSource.WebSocketGateway, args);
-            var migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(args.Data));
+            var migContext = new MigContext(ContextSource.WebSocketGateway, message);
+            var migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(message.Data, message));
             OnPreProcessRequest(migRequest);
             if (!migRequest.Handled)
                 OnPostProcessRequest(migRequest);

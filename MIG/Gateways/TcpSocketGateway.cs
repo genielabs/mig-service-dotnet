@@ -1,6 +1,6 @@
 ﻿/*
   This file is part of MIG (https://github.com/genielabs/mig-service-dotnet)
- 
+
   Copyright (2012-2018) G-Labs (https://github.com/genielabs)
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -85,12 +85,12 @@ namespace MIG.Gateways
             server.Disconnect();
         }
 
-        public void ProcessRequest(ServerDataEventArgs args)
+        public void ProcessRequest(ServerDataEventArgs message)
         {
             UTF8Encoding encoding = new UTF8Encoding();
-            var message = encoding.GetString(args.Data, 0, args.DataLength);
-            var migContext = new MigContext(ContextSource.TcpSocketGateway, args);
-            var migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(message));
+            var messageText = encoding.GetString(message.Data, 0, message.DataLength);
+            var migContext = new MigContext(ContextSource.TcpSocketGateway, message);
+            var migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(messageText, message));
             OnPreProcessRequest(migRequest);
             if (!migRequest.Handled)
                 OnPostProcessRequest(migRequest);

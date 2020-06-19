@@ -1,6 +1,6 @@
 ﻿/*
   This file is part of MIG (https://github.com/genielabs/mig-service-dotnet)
- 
+
   Copyright (2012-2018) G-Labs (https://github.com/genielabs)
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -176,7 +176,7 @@ namespace MIG.Gateways
                 sseEventBuffer.RemoveRange(0, sseEventBuffer.Count - sseEventBufferSize);
             }
             sseEventBuffer.Add(new SseEvent(args.EventData));
-            // dirty work around for signaling new event and 
+            // dirty work around for signaling new event and
             // avoiding locks on long socket timetout
             lock (sseEventToken)
                 Monitor.PulseAll(sseEventToken);
@@ -309,7 +309,7 @@ namespace MIG.Gateways
                                 // parse digest parameters
                                 Regex regex = new Regex(@"([^,].*?)\s*=(\s*)([^,]+)", RegexOptions.Compiled);
                                 var matches = regex.Matches(digestParameters);
-                                var parameters = new Dictionary<string,string>();            
+                                var parameters = new Dictionary<string,string>();
                                 foreach (Match match in matches) {
                                     var keyValue = match.Value.Trim().Split(new[]{'='}, 2);
                                     parameters.Add(keyValue[0], keyValue[1].Trim(new char[]{' ', ',', '"' }));
@@ -362,7 +362,7 @@ namespace MIG.Gateways
                         if (url == "" || url.TrimEnd('/') == baseUrl.TrimEnd('/'))
                         {
                             // default home redirect
-                            response.Redirect("/" + baseUrl.TrimEnd('/') + "/index.html"); 
+                            response.Redirect("/" + baseUrl.TrimEnd('/') + "/index.html");
                             response.Close();
                         }
                         else
@@ -384,13 +384,14 @@ namespace MIG.Gateways
                                     {
                                         string message = url.Substring(url.IndexOf('/', 1) + 1);
                                         var migContext = new MigContext(ContextSource.WebServiceGateway, context);
-                                        migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(message));
+                                        var interfaceCommand = new MigInterfaceCommand(message);
+                                        migRequest = new MigClientRequest(migContext, interfaceCommand);
                                         // Disable HTTP caching
                                         response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache, no-store, must-revalidate");
                                         response.Headers.Set(HttpResponseHeader.Pragma, "no-cache");
                                         response.Headers.Set(HttpResponseHeader.Expires, "0");
                                         // Store POST data (if any) in the migRequest.RequestData field
-                                        migRequest.RequestData = WebServiceUtility.ReadToEnd(request.InputStream);
+                                        interfaceCommand.Data = migRequest.RequestData = WebServiceUtility.ReadToEnd(request.InputStream);
                                         migRequest.RequestText = request.ContentEncoding.GetString(migRequest.RequestData);
                                     }
 
@@ -718,7 +719,7 @@ namespace MIG.Gateways
             var timeoutWatch = Stopwatch.StartNew();
             while (connected)
             {
-                // dirty work around for signaling new event and 
+                // dirty work around for signaling new event and
                 // avoiding locks on long socket timetout
                 lock (sseEventToken)
                     Monitor.Wait(sseEventToken, 1000);
@@ -825,7 +826,7 @@ namespace MIG.Gateways
                 int n = WaitHandle.WaitAny(new WaitHandle[] { callbackState.ListenForNextRequest, stopEvent });
                 if (n == 1)
                 {
-                    // stopEvent was signaled 
+                    // stopEvent was signaled
                     try
                     {
                         callbackState.Listener.Stop();
@@ -865,7 +866,7 @@ namespace MIG.Gateways
         {
             bool isConnected = false;
             IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
-            TcpConnectionInformation[] connections = properties.GetActiveTcpConnections(); 
+            TcpConnectionInformation[] connections = properties.GetActiveTcpConnections();
             foreach (TcpConnectionInformation c in connections)
             {
                 if (c.RemoteEndPoint.ToString() == ep.ToString())
@@ -878,7 +879,7 @@ namespace MIG.Gateways
         }
 
         #endregion
-        
+
         #region URL Aliases
 
         private void UrlAliasAdd(string alias)

@@ -1,6 +1,6 @@
 /*
   This file is part of MIG (https://github.com/genielabs/mig-service-dotnet)
- 
+
   Copyright (2012-2018) G-Labs (https://github.com/genielabs)
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,13 +31,47 @@ namespace MIG
 
         public string Domain { get; set; }
         public string Address { get; set; }
-        public string Command { get; }
+        public string Command { get; private set; }
+        public object Data { get; internal set; }
         /// <summary>
         /// The full unparsed original request string.
         /// </summary>
-        public string OriginalRequest { get; }
+        public string OriginalRequest { get; private set; }
 
+        public MigInterfaceCommand(string request, object data)
+        {
+            Data = data;
+            BuildRequest(request);
+        }
         public MigInterfaceCommand(string request)
+        {
+            BuildRequest(request);
+        }
+
+        public string GetOption(int index)
+        {
+            var option = "";
+            if (index < options.Length)
+            {
+                option = Uri.UnescapeDataString(options[ index ]);
+            }
+            return option;
+        }
+
+        public string OptionsString
+        {
+            get
+            {
+                var optiontext = "";
+                for (var o = 0; o < options.Length; o++)
+                {
+                    optiontext += options[ o ] + "/";
+                }
+                return optiontext;
+            }
+        }
+
+        private void BuildRequest(string request, object data = null)
         {
             OriginalRequest = request;
             try
@@ -66,29 +100,6 @@ namespace MIG
             catch (Exception e)
             {
                 MigService.Log.Error(e);
-            }
-        }
-
-        public string GetOption(int index)
-        {
-            var option = "";
-            if (index < options.Length)
-            {
-                option = Uri.UnescapeDataString(options[ index ]);
-            }
-            return option;
-        }
-
-        public string OptionsString
-        {
-            get
-            {
-                var optiontext = "";
-                for (var o = 0; o < options.Length; o++)
-                {
-                    optiontext += options[ o ] + "/";
-                }
-                return optiontext;
             }
         }
 
