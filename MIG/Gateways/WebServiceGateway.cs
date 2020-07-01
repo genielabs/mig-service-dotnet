@@ -356,6 +356,7 @@ namespace MIG.Gateways
                         if (url.IndexOf("?") > 0)
                             url = url.Substring(0, url.IndexOf("?"));
                         // Check if this url is an alias
+                        string originalUrl = url;
                         url = UrlAliasCheck(url.TrimEnd('/'));
                         //
                         // url aliasing check
@@ -397,15 +398,20 @@ namespace MIG.Gateways
 
                                     OnPreProcessRequest(migRequest);
 
+                                    bool isAppAlias = IsAppAlias(url);
                                     bool requestHandled = migRequest != null && migRequest.Handled;
                                     if (requestHandled)
                                     {
                                         SendResponseObject(context, migRequest.ResponseData);
                                     }
-                                    else if (url.StartsWith(baseUrl) || baseUrl.Equals("/"))
+                                    else if (url.StartsWith(baseUrl) || baseUrl.Equals("/") || isAppAlias)
                                     {
                                         // If request begins <base_url>, process as standard Web request
-                                        string requestedFile = GetWebFilePath(url);
+                                        string requestedFile = isAppAlias ? url : GetWebFilePath(url);
+                                        if (File.Exists(originalUrl) && isAppAlias)
+                                        {
+                                            requestedFile = url = originalUrl;
+                                        }
                                         if (!File.Exists(requestedFile))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -892,9 +898,45 @@ namespace MIG.Gateways
         {
             var alias = urlAliases.Find(a => a.StartsWith(url + ":"));
             if (alias != null)
+            {
                 return alias.Substring(alias.IndexOf(":") + 1);
+            }
             else
-                return url;
+            {
+                // App/PWA alias check
+                foreach (var a in urlAliases)
+                {
+                    var staticAliasIndex = a.IndexOf("*:");
+                    if (staticAliasIndex > 0)
+                    {
+                        string staticAlias = a.Substring(0, staticAliasIndex);
+                        string staticPage = a.Substring(staticAliasIndex + 2);
+                        if (url.StartsWith(staticAlias) || staticAlias.TrimEnd('/') == url)
+                        {
+                            return staticPage;
+                        }
+                    }
+                }
+            }
+            return url;
+        }
+
+        private bool IsAppAlias(string url)
+        {
+            foreach (var a in urlAliases)
+            {
+                var staticAliasIndex = a.IndexOf("*:");
+                if (staticAliasIndex > 0)
+                {
+                    string staticAlias = a.Substring(0, staticAliasIndex);
+                    string staticPage = a.Substring(staticAliasIndex + 2);
+                    if (url == staticPage)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         #endregion

@@ -1,6 +1,6 @@
 ﻿/*
   This file is part of MIG (https://github.com/genielabs/mig-service-dotnet)
- 
+
   Copyright (2012-2018) G-Labs (https://github.com/genielabs)
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +32,7 @@ namespace Test.WebService
         public const string Greet = "greet";
         public const string Token = "token";
     }
-    
+
     class MainClass
     {
         public static void Main(string[] args)
@@ -54,6 +54,8 @@ namespace Test.WebService
             var web = (WebServiceGateway)migService.AddGateway(Gateways.WebServiceGateway);
             web.SetOption(WebServiceGatewayOptions.HomePath, "html");
             web.SetOption(WebServiceGatewayOptions.BaseUrl, "/pages/");
+            // for deploying modern web app (eg. Angular 2 apps)
+            web.SetOption(WebServiceGatewayOptions.UrlAliasPrefix, "app/*:app/index.html");
             web.SetOption(WebServiceGatewayOptions.Host, "*");
             web.SetOption(WebServiceGatewayOptions.Port, webServicePort);
             if (!String.IsNullOrEmpty(authUser) && !String.IsNullOrEmpty(authPass))
@@ -123,7 +125,7 @@ namespace Test.WebService
                     var name = cmd.GetOption(0);
                     migService.RaiseEvent(
                         typeof(MainClass),
-                        cmd.Domain, 
+                        cmd.Domain,
                         cmd.Address,
                         "Reply to Greet",
                         "Greet.User",

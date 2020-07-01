@@ -130,6 +130,11 @@ web.SetOption(WebServiceGatewayOptions.Authentication, "Digest");
 web.SetOption(WebServiceGatewayOptions.EnableFileCaching, "False"); 
 // disable CORS
 web.SetOption(WebServiceGatewayOptions.CorsAllowOrigin, ""); 
+// add a url alias (`path/to/myfile.jpg` will serve `real/path/file.jpg`)
+web.SetOption(WebServiceGatewayOptions.UrlAliasPrefix, "path/to/myfile.jpg:real/path/file.jpg");
+// add web-app folder (used for deploying SPA and PWA such as Angular2 apps)
+// all requested files non found in `app/` will be redirected to `app/index.html`
+web.SetOption(WebServiceGatewayOptions.UrlAliasPrefix, "app/*:app/index.html");
 ```
 
 #### User authentication with `Digest` or `Basic` methods
