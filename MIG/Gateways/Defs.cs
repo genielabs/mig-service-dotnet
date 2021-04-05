@@ -53,6 +53,7 @@ namespace MIG.Gateways
     public const string Port = "Port";
     public const string Authentication = "Authentication";
     public const string AuthenticationRealm = "AuthenticationRealm";
+    public const string IgnoreExtensions = "IgnoreExtensions";
   }
 
   public static class TcpSocketGatewayOptions

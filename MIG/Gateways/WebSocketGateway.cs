@@ -77,6 +77,7 @@ namespace MIG.Gateways
         private int servicePort = 8181;
         private string authenticationSchema = WebAuthenticationSchema.None;
         private string authenticationRealm = "MIG Secure Zone";
+        private bool ignoreExtensions = false;
 
         public WebSocketGateway()
         {
@@ -97,8 +98,11 @@ namespace MIG.Gateways
                         authenticationSchema = option.Value;
                     }
                     break;
-                case WebServiceGatewayOptions.AuthenticationRealm:
+                case WebSocketGatewayOptions.AuthenticationRealm:
                     authenticationRealm = option.Value;
+                    break;
+                case WebSocketGatewayOptions.IgnoreExtensions:
+                    bool.TryParse(option.Value, out ignoreExtensions);
                     break;
             }
         }
@@ -123,7 +127,7 @@ namespace MIG.Gateways
                 webSocketServer = new WebSocketServer(servicePort);
                 webSocketServer.AddWebSocketService<MigWsServer>("/events", () => new MigWsServer(this) {
                     // To ignore the extensions requested from a client.
-                    IgnoreExtensions = true
+                    IgnoreExtensions = ignoreExtensions
                 });
                 if (authenticationSchema != WebAuthenticationSchema.None && authenticationSchema != WebAuthenticationSchema.Token)
                 {
