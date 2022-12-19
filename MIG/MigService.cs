@@ -1,7 +1,7 @@
 ﻿/*
   This file is part of MIG (https://github.com/genielabs/mig-service-dotnet)
  
-  Copyright (2012-2018) G-Labs (https://github.com/genielabs)
+  Copyright (2012-2023) G-Labs (https://github.com/genielabs)
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,18 +25,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-
-using MIG.Config;
-using MIG.Gateways;
-using MIG.Utility;
-
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-
 using NLog;
-using Newtonsoft.Json.Serialization;
 using System.Reflection;
-
+using MIG.Config;
 using Gateway = MIG.Config.Gateway;
 
 namespace MIG
@@ -546,9 +537,7 @@ namespace MIG
 
         public static string GetAssemblyDirectory(Assembly assembly)
         {
-            string codeBase = assembly.CodeBase;
-            UriBuilder uri = new UriBuilder(codeBase);
-            string path = Uri.UnescapeDataString(uri.Path);
+            string path = assembly.Location;
             return Path.GetDirectoryName(path);
         }
 

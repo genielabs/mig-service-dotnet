@@ -1,7 +1,7 @@
 ﻿/*
   This file is part of MIG (https://github.com/genielabs/mig-service-dotnet)
  
-  Copyright (2012-2018) G-Labs (https://github.com/genielabs)
+  Copyright (2012-2023) G-Labs (https://github.com/genielabs)
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@
  *     Project Homepage: https://github.com/genielabs/mig-service-dotnet
  */
 
-using System;
 using MIG.Config;
 
 namespace MIG
