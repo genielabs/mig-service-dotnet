@@ -22,15 +22,18 @@
  */
 
 using System;
+using MessagePack;
 
 namespace MIG
 {
 
-    [Serializable()]
+    [Serializable, MessagePackObject]
     public class MigEvent
     {
+        [Key(0)]
         public DateTime Timestamp { get; set; }
 
+        [Key(1)]
         public double UnixTimestamp
         {
             get
@@ -40,12 +43,20 @@ namespace MIG
             }
         }
 
-        public string Domain { get; }
-        public string Source { get; }
-        public string Description { get; }
-        public string Property { get; }
+        [Key(2)]
+        public string Domain { get; init; }
+        [Key(3)]
+        public string Source { get; init; }
+        [Key(4)]
+        public string Description { get; init; }
+        [Key(5)]
+        public string Property { get; init; }
+        [Key(6)]
         public object Value { get; set; }
 
+        public MigEvent()
+        {
+        }
         public MigEvent(string domain, string source, string description, string propertyPath, object propertyValue)
         {
             Timestamp = DateTime.UtcNow;
@@ -60,10 +71,9 @@ namespace MIG
         {
             //string date = this.Timestamp.ToLocalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffzzz");
             //string logentrytxt = date + "\t" + this.Domain + "\t" + this.Source + "\t" + (this.Description == "" ? "-" : this.Description) + "\t" + this.Property + "\t" + this.Value;
-            string logentrytxt = this.Domain + "\t" + this.Source + "\t" + (this.Description == "" ? "-" : this.Description) + "\t" + this.Property + "\t" + this.Value;
-            return logentrytxt;
+            string logEntryTxt = Domain + "\t" + Source + "\t" + (Description == "" ? "-" : Description) + "\t" + Property + "\t" + Value;
+            return logEntryTxt;
         }
     }
 
 }
-

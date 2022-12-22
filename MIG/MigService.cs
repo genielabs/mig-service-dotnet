@@ -27,6 +27,7 @@ using System.IO;
 using System.Linq;
 using NLog;
 using System.Reflection;
+using MessagePack;
 using MIG.Config;
 using Gateway = MIG.Config.Gateway;
 
@@ -444,6 +445,16 @@ namespace MIG
         public static string JsonSerialize(object data, bool indent = false)
         {
             return Utility.Serialization.JsonSerialize(data, indent);
+        }
+
+        public static byte[] Pack(MigEvent e)
+        {
+            return MessagePackSerializer.Serialize(e);
+        }
+
+        public static MigEvent Unpack(byte[] data)
+        {
+            return MessagePackSerializer.Deserialize<MigEvent>(data, MessagePackSerializerOptions.Standard);
         }
 
         public static void ShellCommand(string command, string args)

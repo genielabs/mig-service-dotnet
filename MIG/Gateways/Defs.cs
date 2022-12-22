@@ -54,6 +54,7 @@ namespace MIG.Gateways
     public const string Authentication = "Authentication";
     public const string AuthenticationRealm = "AuthenticationRealm";
     public const string IgnoreExtensions = "IgnoreExtensions";
+    public const string MessagePack = "MessagePack";
   }
 
   public static class TcpSocketGatewayOptions

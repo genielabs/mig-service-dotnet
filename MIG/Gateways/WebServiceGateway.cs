@@ -516,71 +516,11 @@ namespace MIG.Gateways
                                                         WebFile webFile = GetWebFile(requestedFile);
                                                         response.ContentEncoding = webFile.Encoding;
                                                         response.ContentType += "; charset=" + webFile.Encoding.BodyName;
-                                                        // We don't need to parse the content again if it's coming from the cache
-                                                        if (!webFile.IsCached)
-                                                        {
-                                                            string body = webFile.Content;
-                                                            if (requestedFile.EndsWith(".md"))
-                                                            {
-                                                                // Built-in Markdown files support
-                                                                body = CommonMarkConverter.Convert(body);
-                                                                // TODO: add a way to include HTML header and footer template to be appended to the
-                                                                // TODO: translated markdown text
-                                                            }
-                                                            else
-                                                            {
-                                                                // HTML file
-                                                                // replace prepocessor directives with values
-                                                                bool tagFound;
-                                                                do
-                                                                {
-                                                                    tagFound = false;
-                                                                    int ts = body.IndexOf("{include ");
-                                                                    if (ts >= 0)
-                                                                    {
-                                                                        int te = body.IndexOf("}", ts);
-                                                                        if (te > ts)
-                                                                        {
-                                                                            string rs = body.Substring(ts + (te - ts) + 1);
-                                                                            string cs = body.Substring(ts, te - ts + 1);
-                                                                            string ls = body.Substring(0, ts);
-                                                                            //
-                                                                            try
-                                                                            {
-                                                                                if (cs.StartsWith("{include "))
-                                                                                {
-                                                                                    string fileName = cs.Substring(9).TrimEnd('}').Trim();
-                                                                                    fileName = GetWebFilePath(fileName);
-                                                                                    //
-                                                                                    Encoding fileEncoding = DetectWebFileEncoding(fileName);
-                                                                                    if (fileEncoding == null)
-                                                                                        fileEncoding = defaultWebFileEncoding;
-                                                                                    var incFile = File.ReadAllText(fileName, fileEncoding) + rs;
-                                                                                    body = ls + incFile;
-                                                                                }
-                                                                            }
-                                                                            catch
-                                                                            {
-                                                                                body = ls + "<h5 style=\"color:red\">Error processing '" + cs.Replace("{", "[").Replace("}", "]") + "'</h5>" + rs;
-                                                                            }
-                                                                            tagFound = true;
-                                                                        }
-                                                                    }
-                                                                } while (tagFound); // continue if a pre processor tag was found
-                                                                // {hostos}
-                                                                body = body.Replace("{hostos}", Environment.OSVersion.Platform.ToString());
-                                                                // {filebase}
-                                                                body = body.Replace("{filebase}", Path.GetFileNameWithoutExtension(requestedFile));
-                                                            }
-                                                            // update the cache content with parsing results
-                                                            webFile.Content = body;
-                                                        }
                                                         // Store the cache item if the file cache is enabled
                                                         if (enableFileCache)
                                                         {
                                                             UpdateWebFileCache(requestedFile, webFile.Content, response.ContentEncoding);
                                                         }
-                                                        //
                                                         WebServiceUtility.WriteStringToContext(context, webFile.Content);
                                                     }
                                                     catch (Exception ex)

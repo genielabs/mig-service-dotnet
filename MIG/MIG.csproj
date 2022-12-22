@@ -14,7 +14,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="..\README.md">
       <Link>README.md</Link>
     </None>
@@ -22,6 +21,8 @@
 
   <ItemGroup>
     <PackageReference Include="CommonMark.NET" Version="0.15.1" />
+    <PackageReference Include="MessagePack" Version="2.4.59" />
+    <PackageReference Include="MessagePack.Annotations" Version="2.4.59" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.2.0" />
     <PackageReference Include="Ude.NetStandard" Version="1.2.0" />

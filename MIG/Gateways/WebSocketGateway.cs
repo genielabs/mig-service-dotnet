@@ -23,10 +23,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using MIG.Config;
 using MIG.Gateways.Authentication;
-
 using WebSocketSharp;
 using WebSocketSharp.Net;
 using WebSocketSharp.Server;
@@ -77,6 +75,7 @@ namespace MIG.Gateways
         private string authenticationSchema = WebAuthenticationSchema.None;
         private string authenticationRealm = "MIG Secure Zone";
         private bool ignoreExtensions = false;
+        private bool messagePack = false;
 
         public WebSocketGateway()
         {
@@ -103,6 +102,9 @@ namespace MIG.Gateways
                 case WebSocketGatewayOptions.IgnoreExtensions:
                     bool.TryParse(option.Value, out ignoreExtensions);
                     break;
+                case WebSocketGatewayOptions.MessagePack:
+                    bool.TryParse(option.Value, out messagePack);
+                    break;
             }
         }
 
@@ -113,7 +115,17 @@ namespace MIG.Gateways
                 WebSocketServiceHost host;
                 webSocketServer.WebSocketServices.TryGetServiceHost("/events", out host);
                 if (host == null) return;
-                host.Sessions.BroadcastAsync(MigService.JsonSerialize(args.EventData), () => {});
+
+                if (messagePack)
+                {
+                    //var lz4Options = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
+                    //byte[] eventBytes = MessagePackSerializer.Serialize(args.EventData, lz4Options);
+                    host.Sessions.BroadcastAsync(MigService.Pack(args.EventData), () => {});
+                }
+                else
+                {
+                    host.Sessions.BroadcastAsync(MigService.JsonSerialize(args.EventData), () => {});
+                }
             }
         }
 
