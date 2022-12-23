@@ -43,6 +43,18 @@ namespace MIG
             }
         }
 
+#if NETSTANDARD2_0
+        [Key(2)]
+        public string Domain { get; set; }
+        [Key(3)]
+        public string Source { get; set; }
+        [Key(4)]
+        public string Description { get; set; }
+        [Key(5)]
+        public string Property { get; set; }
+        [Key(6)]
+        public object Value { get; set; }
+#else
         [Key(2)]
         public string Domain { get; init; }
         [Key(3)]
@@ -53,6 +65,7 @@ namespace MIG
         public string Property { get; init; }
         [Key(6)]
         public object Value { get; set; }
+#endif
 
         public MigEvent()
         {
