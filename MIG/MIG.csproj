@@ -10,7 +10,7 @@
     <PackageTags>web gateway middleware multi-protocol networking interoperability</PackageTags>
     <RuntimeIdentifiers>win8-arm;linux-arm;win10-x64;osx.10.11-x64;linux-x64</RuntimeIdentifiers>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>net6.0;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net472;net6.0;netstandard2.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommonMark.NET" Version="0.15.1" />
     <PackageReference Include="MessagePack" Version="2.4.59" />
     <PackageReference Include="MessagePack.Annotations" Version="2.4.59" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />

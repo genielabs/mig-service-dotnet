@@ -31,10 +31,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Security.Cryptography.X509Certificates;
-using System.Web;
 
 using Ude;
-using CommonMark;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
 using MIG.Config;
@@ -642,9 +640,12 @@ namespace MIG.Gateways
             var lastId = context.Request.Headers.Get("Last-Event-ID");
             if (string.IsNullOrEmpty(lastId))
             {
-                var queryValues = HttpUtility.ParseQueryString(context.Request.Url.Query);
-                lastId = queryValues.Get("lastEventId");
-
+                var rx = new Regex("[&|\\?]lastEventId=?([^&]+)?");
+                var matches = rx.Matches(context.Request.Url.Query);
+                if (matches.Count > 0)
+                {
+                    lastId = matches[0].Groups[1].Value;
+                }
             }
 
             if (!string.IsNullOrEmpty(lastId))

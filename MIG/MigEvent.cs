@@ -43,7 +43,7 @@ namespace MIG
             }
         }
 
-#if NETSTANDARD2_0
+#if !NETCORE
         [Key(2)]
         public string Domain { get; set; }
         [Key(3)]
