@@ -34,13 +34,13 @@ namespace MIG.Gateways
 
     public class MigWsServer : WebSocketBehavior
     {
-        private readonly WebSocketGateway gateway;
+        private WebSocketGateway gateway;
 
         public MigWsServer()
         {
 
         }
-        public MigWsServer(WebSocketGateway gw)
+        public void SetWebSocketGateway(WebSocketGateway gw)
         {
             gateway = gw;
         }
@@ -136,9 +136,10 @@ namespace MIG.Gateways
             {
                 Stop();
                 webSocketServer = new WebSocketServer(servicePort);
-                webSocketServer.AddWebSocketService<MigWsServer>("/events", () => new MigWsServer(this) {
+                webSocketServer.AddWebSocketService<MigWsServer>("/events", (server) => {
                     // To ignore the extensions requested from a client.
-                    IgnoreExtensions = ignoreExtensions
+                    server.SetWebSocketGateway(this);
+                    server.IgnoreExtensions = ignoreExtensions;
                 });
                 if (authenticationSchema != WebAuthenticationSchema.None && authenticationSchema != WebAuthenticationSchema.Token)
                 {
