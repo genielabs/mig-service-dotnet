@@ -115,16 +115,22 @@ namespace MIG.Gateways
                 WebSocketServiceHost host;
                 webSocketServer.WebSocketServices.TryGetServiceHost("/events", out host);
                 if (host == null) return;
-
-                if (messagePack)
+                try
                 {
-                    //var lz4Options = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
-                    //byte[] eventBytes = MessagePackSerializer.Serialize(args.EventData, lz4Options);
-                    host.Sessions.BroadcastAsync(MigService.Pack(args.EventData), () => {});
+                    if (messagePack)
+                    {
+                        //var lz4Options = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
+                        //byte[] eventBytes = MessagePackSerializer.Serialize(args.EventData, lz4Options);
+                        host.Sessions.BroadcastAsync(MigService.Pack(args.EventData), () => { });
+                    }
+                    else
+                    {
+                        host.Sessions.BroadcastAsync(MigService.JsonSerialize(args.EventData), () => { });
+                    }
                 }
-                else
+                catch (Exception e)
                 {
-                    host.Sessions.BroadcastAsync(MigService.JsonSerialize(args.EventData), () => {});
+                    MigService.Log.Error(e);
                 }
             }
         }
