@@ -852,6 +852,10 @@ namespace MIG.Gateways
                         string staticPage = a.Substring(staticAliasIndex + 2);
                         if (url.StartsWith(staticAlias) || staticAlias.TrimEnd('/') == url)
                         {
+                            if (staticPage.EndsWith("/*") && url.StartsWith(staticAlias))
+                            {
+                                staticPage = staticPage.Substring(0, staticPage.Length - 2) + "/" + url.Substring(staticAliasIndex);
+                            }
                             return staticPage;
                         }
                     }

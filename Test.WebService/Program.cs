@@ -52,7 +52,8 @@ namespace Test.WebService
             web.SetOption(WebServiceGatewayOptions.HomePath, "html");
             web.SetOption(WebServiceGatewayOptions.BaseUrl, "/pages/");
             // for deploying modern web app (eg. Angular 2 apps)
-            web.SetOption(WebServiceGatewayOptions.UrlAliasPrefix, "app/*:app/index.html");
+            web.SetOption(WebServiceGatewayOptions.UrlAliasPrefix + "1", "app/*:app/index.html");
+            web.SetOption(WebServiceGatewayOptions.UrlAliasPrefix + "2", "hg/html/pages/control/widgets/homegenie/generic/images/*:assets/widgets/compat/images/*");
             web.SetOption(WebServiceGatewayOptions.Host, "*");
             web.SetOption(WebServiceGatewayOptions.Port, webServicePort);
             if (!String.IsNullOrEmpty(authUser) && !String.IsNullOrEmpty(authPass))
