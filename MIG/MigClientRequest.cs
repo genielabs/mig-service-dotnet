@@ -51,8 +51,8 @@ namespace MIG
 
         public MigClientRequest(MigContext context, MigInterfaceCommand command)
         {
-            Command = command;
             Context = context;
+            Command = command;
         }
     }
 
@@ -80,8 +80,8 @@ namespace MIG
 
         public ResponseStatus(Status status, string message = "")
         {
-            this.Status = status;
-            this.Message = message;
+            Status = status;
+            Message = message;
         }
     }
 

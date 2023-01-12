@@ -173,7 +173,7 @@ namespace MIG.Gateways
             }
             sseEventBuffer.Add(new SseEvent(args.EventData));
             // dirty work around for signaling new event and
-            // avoiding locks on long socket timetout
+            // avoiding locks on long socket timeout
             lock (sseEventToken)
                 Monitor.PulseAll(sseEventToken);
         }
@@ -665,7 +665,7 @@ namespace MIG.Gateways
             while (connected)
             {
                 // dirty work around for signaling new event and
-                // avoiding locks on long socket timetout
+                // avoiding locks on long socket timeout
                 lock (sseEventToken)
                     Monitor.Wait(sseEventToken, 1000);
                 // safely dequeue events
@@ -696,10 +696,11 @@ namespace MIG.Gateways
                                 break;
                             }
                         }
-
+                    }
+                    else
+                    {
                         Thread.Sleep(100);
                     }
-
                     // there might be new data after sending
                 } while (connected && bufferedData.Count > 0);
 
@@ -871,7 +872,6 @@ namespace MIG.Gateways
                 var staticAliasIndex = a.IndexOf("*:");
                 if (staticAliasIndex > 0)
                 {
-                    string staticAlias = a.Substring(0, staticAliasIndex);
                     string staticPage = a.Substring(staticAliasIndex + 2);
                     if (url == staticPage)
                     {
@@ -998,7 +998,10 @@ namespace MIG.Gateways
         private string GetWebFilePath(string file)
         {
             string path = homePath;
-            file = file.Replace(baseUrl, "");
+            if (file.StartsWith(baseUrl))
+            {
+                file = file.Substring(baseUrl.Length);
+            }
             //
             var os = Environment.OSVersion;
             var platformId = os.Platform;

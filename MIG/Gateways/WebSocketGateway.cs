@@ -25,8 +25,10 @@ using System;
 using System.Collections.Generic;
 using MIG.Config;
 using MIG.Gateways.Authentication;
+using Newtonsoft.Json;
 using WebSocketSharp;
 using WebSocketSharp.Net;
+using WebSocketSharp.Net.WebSockets;
 using WebSocketSharp.Server;
 
 namespace MIG.Gateways
@@ -58,7 +60,7 @@ namespace MIG.Gateways
         protected override void OnMessage(MessageEventArgs args)
         {
             base.OnMessage(args);
-            gateway.ProcessRequest(args);
+            gateway.ProcessRequest(args, Context);
         }
     }
 
@@ -110,29 +112,7 @@ namespace MIG.Gateways
 
         public void OnInterfacePropertyChanged(object sender, InterfacePropertyChangedEventArgs args)
         {
-            if (webSocketServer != null && webSocketServer.IsListening)
-            {
-                WebSocketServiceHost host;
-                webSocketServer.WebSocketServices.TryGetServiceHost("/events", out host);
-                if (host == null) return;
-                try
-                {
-                    if (messagePack)
-                    {
-                        //var lz4Options = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
-                        //byte[] eventBytes = MessagePackSerializer.Serialize(args.EventData, lz4Options);
-                        host.Sessions.BroadcastAsync(MigService.Pack(args.EventData), () => { });
-                    }
-                    else
-                    {
-                        host.Sessions.BroadcastAsync(MigService.JsonSerialize(args.EventData), () => { });
-                    }
-                }
-                catch (Exception e)
-                {
-                    MigService.Log.Error(e);
-                }
-            }
+            SendMessage(args.EventData);
         }
 
         public bool Start()
@@ -178,13 +158,44 @@ namespace MIG.Gateways
             }
         }
 
-        public void ProcessRequest(MessageEventArgs message)
+        public void ProcessRequest(MessageEventArgs message, WebSocketContext context)
         {
+            // check if Data is a JSON string
+            bool isJsonPayload = false;
+            string requestId = "";
+            string messageData = message.Data;
+            try
+            {
+                dynamic jsonPayload = JsonConvert.DeserializeObject(messageData);
+                if (jsonPayload != null && jsonPayload.id != null)
+                {
+                    isJsonPayload = true;
+                    requestId = jsonPayload.id;
+                    messageData = jsonPayload.data;
+                }
+            }
+            catch (Exception e)
+            {
+                // Not valid JSON, process as text message
+            }
             var migContext = new MigContext(ContextSource.WebSocketGateway, message);
-            var migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(message.Data, message));
+            var migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(messageData, message));
             OnPreProcessRequest(migRequest);
             if (!migRequest.Handled)
                 OnPostProcessRequest(migRequest);
+            if (isJsonPayload && !String.IsNullOrEmpty(requestId))
+            {
+                // send reply to this message using the requestId
+                var responseEvent = new MigEvent("#", requestId, "", "Response.Data", migRequest.ResponseData);
+                if (messagePack)
+                {
+                    context.WebSocket.Send(MigService.Pack(responseEvent));
+                }
+                else
+                {
+                    context.WebSocket.Send(MigService.JsonSerialize(responseEvent));
+                }
+            }
         }
 
         public bool IsAuthorized(string token)
@@ -223,6 +234,30 @@ namespace MIG.Gateways
             }
             return null;
         }
+
+        private void SendMessage(MigEvent message)
+        {
+            WebSocketServiceHost host = null;
+            if (webSocketServer != null && webSocketServer.IsListening)
+            {
+                webSocketServer.WebSocketServices.TryGetServiceHost("/events", out host);
+            }
+            if (host == null) return;
+            try
+            {
+                if (messagePack)
+                {
+                    host.Sessions.BroadcastAsync(MigService.Pack(message), () => { });
+                }
+                else
+                {
+                    host.Sessions.BroadcastAsync(MigService.JsonSerialize(message), () => { });
+                }
+            }
+            catch (Exception e)
+            {
+                MigService.Log.Error(e);
+            }
+        }
     }
 }
-

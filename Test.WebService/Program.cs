@@ -49,11 +49,11 @@ namespace Test.WebService
 
             // Add and configure the WebService gateway
             var web = (WebServiceGateway)migService.AddGateway(Gateways.WebServiceGateway);
-            web.SetOption(WebServiceGatewayOptions.HomePath, "html");
-            web.SetOption(WebServiceGatewayOptions.BaseUrl, "/pages/");
+            web.SetOption(WebServiceGatewayOptions.HomePath, "app");
+            web.SetOption(WebServiceGatewayOptions.BaseUrl, "/app");
             // for deploying modern web app (eg. Angular 2 apps)
             web.SetOption(WebServiceGatewayOptions.UrlAliasPrefix + "1", "app/*:app/index.html");
-            web.SetOption(WebServiceGatewayOptions.UrlAliasPrefix + "2", "hg/html/pages/control/widgets/homegenie/generic/images/*:assets/widgets/compat/images/*");
+            web.SetOption(WebServiceGatewayOptions.UrlAliasPrefix + "2", "hg/html/pages/control/widgets/homegenie/generic/images/*:app/assets/widgets/compat/images/*");
             web.SetOption(WebServiceGatewayOptions.Host, "*");
             web.SetOption(WebServiceGatewayOptions.Port, webServicePort);
             if (!String.IsNullOrEmpty(authUser) && !String.IsNullOrEmpty(authPass))
@@ -132,14 +132,19 @@ namespace Test.WebService
                     break;
                 case ApiCommands.Echo:
                     string fullRequestPath = cmd.OriginalRequest;
-                    migService.RaiseEvent(
-                        typeof(MainClass),
+                    var migEvent = migService.GetEvent(
                         cmd.Domain,
                         cmd.Address,
                         "Reply to Echo",
                         "Echo.Data",
                         fullRequestPath
                     );
+                    migService.RaiseEvent(
+                        typeof(MainClass),
+                        migEvent
+                    );
+                    // this is sent back to the client if the message was provided in the form {id: <request-id>, data: <message>}
+                    request.ResponseData = migEvent; 
                     break;
                 case ApiCommands.Ping:
                     migService.RaiseEvent(

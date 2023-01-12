@@ -12,10 +12,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="html\readme.md">
+        <None Include="app\readme.md">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Include="html\index.html">
+        <None Include="app\index.html">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
         <None Include="NLog.config">

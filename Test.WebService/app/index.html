@@ -47,6 +47,11 @@ setInterval(function(){
     if (webSocket.readyState == 1)
     {
         webSocket.send("myapp/demo/echo/Hello+World");
+        const requestId = 'request-' + Math.random()*1000;
+        webSocket.send(JSON.stringify({id: requestId, data: 'myapp/demo/echo/Hello+World'}));
+        var newElement = document.createElement("li");
+        newElement.innerHTML = "CLIENT SENT: " + JSON.stringify({id: requestId, data: 'myapp/demo/echo/Hello+World'});
+        document.getElementById('eventList').appendChild(newElement);
     }
     // Send a request using standard HTTP
     $.get('/api/myapp/demo/ping', function(res){

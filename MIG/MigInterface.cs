@@ -116,31 +116,8 @@ namespace MIG
     {
         public string Domain { get; set; }
         public string Address { get; set; }
-        // TODO: move this specific field to MIG.HomeAutomation
-        public ModuleTypes ModuleType { get; set; }
         public string Description { get; set; }
         public dynamic CustomData { get; set; }
-    }
-
-    // TODO: move this specific enum to MIG.HomeAutomation
-    public enum ModuleTypes
-    {
-        Generic = -1,
-        Program,
-        Switch,
-        Light,
-        Dimmer,
-        Sensor,
-        Temperature,
-        Siren,
-        Fan,
-        Thermostat,
-        Shutter,
-        DoorWindow,
-        DoorLock,
-        MediaTransmitter,
-        MediaReceiver
-        //siren, alarm, motion sensor, door sensor, thermal sensor, etc.
     }
 }
 
