@@ -22,6 +22,7 @@
   <ItemGroup>
     <PackageReference Include="MessagePack" Version="2.4.59" />
     <PackageReference Include="MessagePack.Annotations" Version="2.4.59" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.2.0" />
     <PackageReference Include="Ude.NetStandard" Version="1.2.0" />
