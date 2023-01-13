@@ -23,6 +23,7 @@
 
 using System;
 using System.Collections.Generic;
+using MessagePack;
 using MIG.Config;
 using MIG.Gateways.Authentication;
 using Newtonsoft.Json;
@@ -76,8 +77,8 @@ namespace MIG.Gateways
         private int servicePort = 8181;
         private string authenticationSchema = WebAuthenticationSchema.None;
         private string authenticationRealm = "MIG Secure Zone";
-        private bool ignoreExtensions = false;
-        private bool messagePack = false;
+        private bool ignoreExtensions;
+        private bool messagePack;
 
         public WebSocketGateway()
         {
@@ -164,19 +165,29 @@ namespace MIG.Gateways
             bool isJsonPayload = false;
             string requestId = "";
             string messageData = message.Data;
-            try
+            if (messagePack)
             {
-                dynamic jsonPayload = JsonConvert.DeserializeObject(messageData);
-                if (jsonPayload != null && jsonPayload.id != null)
-                {
-                    isJsonPayload = true;
-                    requestId = jsonPayload.id;
-                    messageData = jsonPayload.data;
-                }
+                var request = MigService.Unpack<WsRequest>(message.RawData);
+                requestId = request.id;
+                messageData = request.data;
+                isJsonPayload = true;
             }
-            catch (Exception e)
+            else
             {
-                // Not valid JSON, process as text message
+                try
+                {
+                    dynamic jsonPayload = JsonConvert.DeserializeObject(messageData);
+                    if (jsonPayload != null && jsonPayload.id != null)
+                    {
+                        requestId = jsonPayload.id;
+                        messageData = jsonPayload.data;
+                        isJsonPayload = true;
+                    }
+                }
+                catch (Exception e)
+                {
+                    // Not valid JSON, process as text message
+                }
             }
             var migContext = new MigContext(ContextSource.WebSocketGateway, message);
             var migRequest = new MigClientRequest(migContext, new MigInterfaceCommand(messageData, message));
@@ -189,6 +200,10 @@ namespace MIG.Gateways
                 var responseEvent = new MigEvent("#", requestId, "", "Response.Data", migRequest.ResponseData);
                 if (messagePack)
                 {
+                    if (responseEvent.Value is string == false)
+                    {
+                        responseEvent.Value = JsonConvert.SerializeObject(responseEvent.Value);
+                    }
                     context.WebSocket.Send(MigService.Pack(responseEvent));
                 }
                 else
@@ -258,6 +273,18 @@ namespace MIG.Gateways
             {
                 MigService.Log.Error(e);
             }
+        }
+    }
+    
+    [Serializable, MessagePackObject]
+    public class WsRequest
+    {
+        [Key(0)]
+        public string id { get; set; }
+        [Key(1)]
+        public string data { get; set; }
+        public WsRequest()
+        {
         }
     }
 }

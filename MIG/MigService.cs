@@ -452,9 +452,9 @@ namespace MIG
             return MessagePackSerializer.Serialize(e);
         }
 
-        public static MigEvent Unpack(byte[] data)
+        public static T Unpack<T>(byte[] data)
         {
-            return MessagePackSerializer.Deserialize<MigEvent>(data, MessagePackSerializerOptions.Standard);
+            return MessagePackSerializer.Deserialize<T>(data, MessagePackSerializerOptions.Standard);
         }
 
         public static void ShellCommand(string command, string args)
