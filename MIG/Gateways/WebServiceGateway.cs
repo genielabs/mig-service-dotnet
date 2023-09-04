@@ -458,6 +458,10 @@ namespace MIG.Gateways
                                             {
                                                 response.ContentType = "application/x-mpegURL";
                                             }
+                                            else if (url.ToLower().EndsWith(".ts"))
+                                            {
+                                                response.ContentType = "video/mp2t";
+                                            }
                                             else if (url.ToLower().EndsWith(".appcache"))
                                             {
                                                 response.ContentType = "text/cache-manifest";
