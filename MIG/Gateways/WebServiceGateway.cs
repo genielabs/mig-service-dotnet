@@ -415,6 +415,7 @@ namespace MIG.Gateways
                                         }
                                         else
                                         {
+                                            bool disableCacheControl = HttpCacheIgnoreCheck(url);
                                             bool isText = false;
                                             if (url.ToLower().EndsWith(".js")) // || requestedurl.EndsWith(".json"))
                                             {
@@ -457,10 +458,12 @@ namespace MIG.Gateways
                                             else if (url.ToLower().EndsWith(".m3u8"))
                                             {
                                                 response.ContentType = "application/x-mpegURL";
+                                                disableCacheControl = true;
                                             }
                                             else if (url.ToLower().EndsWith(".ts"))
                                             {
                                                 response.ContentType = "video/mp2t";
+                                                disableCacheControl = true;
                                             }
                                             else if (url.ToLower().EndsWith(".appcache"))
                                             {
@@ -492,7 +495,6 @@ namespace MIG.Gateways
                                                 if (file.LastWriteTime.ToUniversalTime().Equals(modifiedSince))
                                                     modified = false;
                                             }
-                                            bool disableCacheControl = HttpCacheIgnoreCheck(url);
                                             if (!modified && !disableCacheControl)
                                             {
                                                 // TODO: !IMPORTANT! exclude from caching files that contains SSI tags!
