@@ -454,6 +454,10 @@ namespace MIG.Gateways
                                             {
                                                 response.ContentType = "audio/x-wav";
                                             }
+                                            else if (url.ToLower().EndsWith(".m3u8"))
+                                            {
+                                                response.ContentType = "application/x-mpegURL";
+                                            }
                                             else if (url.ToLower().EndsWith(".appcache"))
                                             {
                                                 response.ContentType = "text/cache-manifest";
