@@ -202,7 +202,7 @@ namespace MIG.Gateways
                 {
                     if (responseEvent.Value is string == false)
                     {
-                        responseEvent.Value = JsonConvert.SerializeObject(responseEvent.Value);
+                        responseEvent.Value = MigService.JsonSerialize(responseEvent.Value);
                     }
                     context.WebSocket.Send(MigService.Pack(responseEvent));
                 }
