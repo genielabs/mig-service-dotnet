@@ -119,6 +119,8 @@ namespace MIG.Gateways
         public WebServiceGateway()
         {
             sseEventBuffer = new List<SseEvent>();
+            // the following line fixes the error: "Windows -1252 is not supported encoding name"
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
         public List<Option> Options { get; set; }
