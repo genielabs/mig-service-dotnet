@@ -767,9 +767,15 @@ namespace MIG
             {
                 InterfacePropertyChanged(sender, args);
             }
-            // Route event to MIG.Gateways as well
-            foreach (var gateway in Gateways)
-                gateway.OnInterfacePropertyChanged(sender, args);
+            // check if event has been flagged as "disabled" (Events.Disable)
+            if (!args.EventData.Disabled)
+            {
+                // Route event to MIG.Gateways as well
+                foreach (var gateway in Gateways)
+                {
+                    gateway.OnInterfacePropertyChanged(sender, args);
+                }
+            }
         }
 
         #endregion

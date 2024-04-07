@@ -67,6 +67,9 @@ namespace MIG
         public object Value { get; set; }
 #endif
 
+        [NonSerialized, IgnoreMember]
+        public bool Disabled;
+
         public MigEvent()
         {
         }
