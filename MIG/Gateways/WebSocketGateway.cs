@@ -225,7 +225,15 @@ namespace MIG.Gateways
         public AuthorizationToken GetAuthorizationToken(double expireSeconds)
         {
             var token = new AuthorizationToken(expireSeconds);
-            authorizationTokens.RemoveAll(t => t.IsExpired);
+            try
+            {
+                authorizationTokens.RemoveAll(t => t.IsExpired);
+            }
+            catch (Exception e)
+            { 
+                // ignored
+                Console.Error.WriteLine(e);
+            }
             authorizationTokens.Add(token);
             return token;
         }
