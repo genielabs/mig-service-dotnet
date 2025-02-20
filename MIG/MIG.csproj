@@ -19,11 +19,15 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net472' ">
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.7.1" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.0" />
     <PackageReference Include="WebsocketSharp.Standard2" Version="2022.4.16.1520" />
-    <PackageReference Include="MessagePack" Version="2.5.140" />
-    <PackageReference Include="MessagePack.Annotations" Version="2.5.140" />
+    <PackageReference Include="MessagePack" Version="2.5.192" />
+    <PackageReference Include="MessagePack.Annotations" Version="2.5.192" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.2.3" />
