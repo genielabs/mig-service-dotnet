@@ -23,7 +23,7 @@ using Microsoft.Extensions.Logging;
 using MIG;
 using MIG.Gateways;
 using MIG.Gateways.Authentication;
-using MIG.Logging;
+using GLabs.Logging;
 
 namespace Test.WebService
 {

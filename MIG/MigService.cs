@@ -26,9 +26,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using GLabs.Logging;
 using MessagePack;
 using MIG.Config;
-using MIG.Logging;
 using Gateway = MIG.Config.Gateway;
 
 namespace MIG
@@ -71,7 +71,7 @@ namespace MIG
 
         #region Public events and fields
 
-        public static Logger Log = LogManager.GetCurrentClassLogger();
+        public static Logger Log = LogManager.GetLogger("MigService");
 
         /// <summary>
         /// Occurs on gateway request pre process.
