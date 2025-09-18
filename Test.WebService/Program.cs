@@ -1,7 +1,7 @@
 ﻿/*
   This file is part of MIG (https://github.com/genielabs/mig-service-dotnet)
 
-  Copyright (2012-2023) G-Labs (https://github.com/genielabs)
+  Copyright (2012-2025) G-Labs (https://github.com/genielabs)
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,9 +16,14 @@
   limitations under the License.
 */
 
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
 using MIG;
 using MIG.Gateways;
 using MIG.Gateways.Authentication;
+using MIG.Logging;
 
 namespace Test.WebService
 {
@@ -34,7 +39,23 @@ namespace Test.WebService
     {
         public static void Main(string[] args)
         {
-            var Log = MigService.Log;
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false)
+                .Build();
+
+            var serviceProvider = new ServiceCollection()
+                .AddLogging(builder =>
+                {
+                    builder.AddConfiguration(configuration.GetSection("Logging"));
+                    builder.AddConsole();
+                })
+                .BuildServiceProvider();
+
+            var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+            LogManager.Initialize(loggerFactory);
+
+            var Log = LogManager.GetLogger("Test.WebService");
             string webServicePort = "8088";
             string webSocketPort = "8181";
 

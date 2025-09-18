@@ -1,7 +1,7 @@
 ﻿/*
   This file is part of MIG (https://github.com/genielabs/mig-service-dotnet)
  
-  Copyright (2012-2023) G-Labs (https://github.com/genielabs)
+  Copyright (2012-2025) G-Labs (https://github.com/genielabs)
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,10 +25,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NLog;
 using System.Reflection;
 using MessagePack;
 using MIG.Config;
+using MIG.Logging;
 using Gateway = MIG.Config.Gateway;
 
 namespace MIG

@@ -1,14 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MIG</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.3.0</Version>
     <Authors>Generoso Martello</Authors>
     <Company>G-Labs</Company>
     <Description>MIG is a .NET library providing an integrated solution for developing multi-protocol networked applications and real time web applications.</Description>
     <PackageLicense>./LICENSE</PackageLicense>
     <PackageProjectUrl>https://github.com/genielabs/mig-service-dotnet/</PackageProjectUrl>
     <PackageTags>web gateway middleware multi-protocol networking interoperability</PackageTags>
-    <RuntimeIdentifiers>win-arm64;linux-arm;linux-arm64;win-x64;osx-x64;linux-x64</RuntimeIdentifiers>
     <OutputType>Library</OutputType>
     <TargetFrameworks>netstandard2.0;net472;net6.0;net8.0;net9.0</TargetFrameworks>
   </PropertyGroup>
@@ -19,23 +18,50 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net472' ">
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.1" />
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="9.0.9"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.9"/>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.9"/>
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.9"/>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.9"/>
   </ItemGroup>
-    
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="8.0.1"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1"/>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1"/>
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1"/>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0"/>
+  </ItemGroup>
+
   <ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.2"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="6.0.1"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.1"/>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.1"/>
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.1"/>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.1"/>
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'net472' ">
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.2.0"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="2.2.0"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.2.0"/>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0"/>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="2.2.0"/>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0"/>
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.2.0"/>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.1"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.9" />
-    <PackageReference Include="WebsocketSharp.Standard2" Version="2022.4.16.1520" />
-    <PackageReference Include="MessagePack" Version="3.1.4" />
-    <PackageReference Include="MessagePack.Annotations" Version="3.1.4" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="6.0.4" />
-    <PackageReference Include="Ude.NetStandard" Version="1.2.0" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0"/>
+    <PackageReference Include="WebsocketSharp.Standard2" Version="2022.4.16.1520"/>
+    <PackageReference Include="MessagePack" Version="3.1.4"/>
+    <PackageReference Include="MessagePack.Annotations" Version="3.1.4"/>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4"/>
+    <PackageReference Include="Ude.NetStandard" Version="1.2.0"/>
   </ItemGroup>
-
 </Project>
