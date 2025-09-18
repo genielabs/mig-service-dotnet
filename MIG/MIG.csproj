@@ -8,9 +8,9 @@
     <PackageLicense>./LICENSE</PackageLicense>
     <PackageProjectUrl>https://github.com/genielabs/mig-service-dotnet/</PackageProjectUrl>
     <PackageTags>web gateway middleware multi-protocol networking interoperability</PackageTags>
-    <RuntimeIdentifiers>win8-arm;linux-arm;win10-x64;osx.10.11-x64;linux-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers>win-arm64;linux-arm;linux-arm64;win-x64;osx-x64;linux-x64</RuntimeIdentifiers>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>net472;net6.0;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net472;net6.0;net8.0;net9.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,22 +22,20 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'net472' ">
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.1" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.0" />
-    <PackageReference Include="WebsocketSharp.Standard2" Version="2022.4.16.1520" />
-    <PackageReference Include="MessagePack" Version="2.5.192" />
-    <PackageReference Include="MessagePack.Annotations" Version="2.5.192" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="5.2.3" />
-    <PackageReference Include="Ude.NetStandard" Version="1.2.0" />
+    
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Microsoft.CSharp">
-      <HintPath>..\..\..\..\.nuget\packages\microsoft.netframework.referenceassemblies.net472\1.0.2\build\.NETFramework\v4.7.2\Microsoft.CSharp.dll</HintPath>
-    </Reference>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.9" />
+    <PackageReference Include="WebsocketSharp.Standard2" Version="2022.4.16.1520" />
+    <PackageReference Include="MessagePack" Version="3.1.4" />
+    <PackageReference Include="MessagePack.Annotations" Version="3.1.4" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="6.0.4" />
+    <PackageReference Include="Ude.NetStandard" Version="1.2.0" />
   </ItemGroup>
 
 </Project>
