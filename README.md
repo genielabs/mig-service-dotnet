@@ -1,6 +1,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/6genehqw9wtuuxkl?svg=true)](https://ci.appveyor.com/project/genemars/mig-service-dotnet)
 [![NuGet](https://img.shields.io/nuget/v/MIG.svg)](https://www.nuget.org/packages/MIG/)
 ![License](https://img.shields.io/github/license/genielabs/mig-service-dotnet.svg)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/genielabs/mig-service-dotnet)
 
 # MIG libray for .Net/Mono
 
