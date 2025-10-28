@@ -1015,6 +1015,7 @@ namespace MIG.Gateways
 
         private string GetWebFilePath(string file)
         {
+            file = Uri.UnescapeDataString(file);
             string path = homePath;
             if (file.StartsWith(baseUrl))
             {
