@@ -406,11 +406,11 @@ namespace MIG.Gateways
                                     {
                                         // If request begins <base_url>, process as standard Web request
                                         string requestedFile = isAppAlias ? url : GetWebFilePath(url);
-                                        if (File.Exists(originalUrl) && isAppAlias)
+                                        if (FileExists(originalUrl) && isAppAlias)
                                         {
-                                            requestedFile = url = originalUrl;
+                                            requestedFile = url = Uri.UnescapeDataString(originalUrl);
                                         }
-                                        if (!File.Exists(requestedFile))
+                                        if (!FileExists(requestedFile))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.NotFound;
                                             WebServiceUtility.WriteStringToContext(context, "<h1>404 - Not Found</h1>");
@@ -922,6 +922,12 @@ namespace MIG.Gateways
         #endregion
 
         #region HTTP Files Management and Caching
+
+        private bool FileExists(string url)
+        {
+            url = Uri.UnescapeDataString(url);
+            return File.Exists(url);
+        }
 
         private WebFile GetWebFile(string file)
         {
