@@ -11,6 +11,7 @@
 *.pidb
 Thumbs.db
 .idea
+*.DotSettings.user
 
 # Nuget packages
 packages
