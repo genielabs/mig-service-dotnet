@@ -26,6 +26,7 @@ namespace MIG.Utility
         {
             JsonSerializerSettings settings = new JsonSerializerSettings();
             settings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+            settings.DateTimeZoneHandling = DateTimeZoneHandling.Utc; 
             if (indent) settings.Formatting = Formatting.Indented;
             return JsonConvert.SerializeObject(data, settings);
         }
