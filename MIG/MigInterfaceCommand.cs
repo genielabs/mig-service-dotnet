@@ -81,19 +81,15 @@ namespace MIG
                 if (requests.Length > 1)
                 {
                     Domain = requests[0];
-                    if (Domain == "html")
+                    Address = requests[1];
+                    if (requests.Length > 2)
                     {
-                        return;
-                    }
-                    else if (requests.Length > 2)
-                    {
-                        Address = requests[1];
                         Command = requests[2];
-                        if (requests.Length > 3)
-                        {
-                            options = new string[requests.Length - 3];
-                            Array.Copy(requests, 3, options, 0, requests.Length - 3);
-                        }
+                    }
+                    if (requests.Length > 3)
+                    {
+                        options = new string[requests.Length - 3];
+                        Array.Copy(requests, 3, options, 0, requests.Length - 3);
                     }
                 }
             }
@@ -105,4 +101,3 @@ namespace MIG
 
     }
 }
-
