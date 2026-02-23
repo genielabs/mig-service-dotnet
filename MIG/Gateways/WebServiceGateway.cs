@@ -433,6 +433,10 @@ namespace MIG.Gateways
                                             {
                                                 response.ContentType = "application/zip";
                                             }
+                                            else if (url.ToLower().EndsWith(".webp"))
+                                            {
+                                                response.ContentType = "image/webp";
+                                            }
                                             else if (url.ToLower().EndsWith(".png"))
                                             {
                                                 response.ContentType = "image/png";
@@ -456,6 +460,18 @@ namespace MIG.Gateways
                                             else if (url.ToLower().EndsWith(".wav"))
                                             {
                                                 response.ContentType = "audio/x-wav";
+                                            }
+                                            else if (url.ToLower().EndsWith(".weba"))
+                                            {
+                                                response.ContentType = "audio/webm";
+                                            }
+                                            else if (url.ToLower().EndsWith(".webm"))
+                                            {
+                                                response.ContentType = "video/webm";
+                                            }
+                                            else if (url.ToLower().EndsWith(".mp4"))
+                                            {
+                                                response.ContentType = "video/mp4";
                                             }
                                             else if (url.ToLower().EndsWith(".m3u8"))
                                             {
