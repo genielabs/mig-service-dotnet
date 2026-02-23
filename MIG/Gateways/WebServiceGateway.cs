@@ -559,7 +559,50 @@ namespace MIG.Gateways
                                                 }
                                                 else
                                                 {
-                                                    WebServiceUtility.WriteBytesToContext(context, File.ReadAllBytes(requestedFile));
+                                                    response.Headers.Set("Accept-Ranges", "bytes");
+                                                    string rangeHeader = request.Headers["Range"];
+                                                    if (string.IsNullOrEmpty(rangeHeader))
+                                                    {
+                                                        response.StatusCode = (int)HttpStatusCode.OK;
+                                                        response.ContentLength64 = file.Length;
+                                                        using (var fileStream = file.OpenRead())
+                                                        {
+                                                            fileStream.CopyTo(response.OutputStream);
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        try
+                                                        {
+                                                            var rangeParts = rangeHeader.Replace("bytes=", "").Split('-');
+                                                            long start = long.Parse(rangeParts[0]);
+                                                            long end = (rangeParts.Length > 1 && !string.IsNullOrEmpty(rangeParts[1])) ? long.Parse(rangeParts[1]) : file.Length - 1;
+                                                            if (start < 0 || start >= file.Length) throw new InvalidOperationException("Start range invalid.");
+                                                            end = Math.Min(end, file.Length - 1);
+                                                            long contentLength = (end - start) + 1;
+                                                            if (contentLength <= 0) throw new InvalidOperationException("Content length invalid.");
+                                                            response.StatusCode = (int)HttpStatusCode.PartialContent;
+                                                            response.ContentLength64 = contentLength;
+                                                            response.Headers.Set("Content-Range", $"bytes {start}-{end}/{file.Length}");
+                                                            byte[] buffer = new byte[8192]; // Buffer da 8KB
+                                                            long bytesRemaining = contentLength;
+                                                            using (var fileStream = file.OpenRead())
+                                                            {
+                                                                fileStream.Seek(start, SeekOrigin.Begin);
+                                                                int bytesRead;
+                                                                while (bytesRemaining > 0 && (bytesRead = fileStream.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesRemaining))) > 0)
+                                                                {
+                                                                    response.OutputStream.Write(buffer, 0, bytesRead);
+                                                                    bytesRemaining -= bytesRead;
+                                                                }
+                                                            }
+                                                        }
+                                                        catch (Exception ex)
+                                                        {
+                                                            response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                                                            MigService.Log.Warn($"Invalid Range Header '{rangeHeader}': {ex.Message}");
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
