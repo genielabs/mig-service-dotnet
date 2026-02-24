@@ -468,10 +468,12 @@ namespace MIG.Gateways
                                             else if (url.ToLower().EndsWith(".webm"))
                                             {
                                                 response.ContentType = "video/webm";
+                                                disableCacheControl = true;
                                             }
                                             else if (url.ToLower().EndsWith(".mp4"))
                                             {
                                                 response.ContentType = "video/mp4";
+                                                disableCacheControl = true;
                                             }
                                             else if (url.ToLower().EndsWith(".m3u8"))
                                             {
