@@ -249,7 +249,7 @@ namespace MIG.Gateways
                 }
 
                 response.Headers.Set(HttpResponseHeader.Server, "MIG WebService Gateway");
-                response.KeepAlive = false;
+                //response.KeepAlive = false;
 
                 bool requestHasAuthorizationHeader = request.Headers["Authorization"] != null;
                 string remoteAddress = request.RemoteEndPoint.Address.ToString();
@@ -292,11 +292,14 @@ namespace MIG.Gateways
                             var user = OnUserAuthentication(new UserAuthenticationEventArgs(username));
                             // Also `user.Password` must be encrypted using the `Digest.CreatePassword(..)` method,
                             // otherwise authentication will fail
-                            password = Digest.CreatePassword(username, user.Realm, password);
-                            if (user != null && user.Name == username && user.Password == password)
+                            try
                             {
-                                verified = true;
-                            }
+                                password = Digest.CreatePassword(username, user.Realm, password);
+                                if (user.Name == username && user.Password == password)
+                                {
+                                    verified = true;
+                                }
+                            } catch { /* ignored */ }
                         }
                         else if (authorizationSchema == WebAuthenticationSchema.Digest)
                         {
@@ -468,22 +471,18 @@ namespace MIG.Gateways
                                             else if (url.ToLower().EndsWith(".webm"))
                                             {
                                                 response.ContentType = "video/webm";
-                                                disableCacheControl = true;
                                             }
                                             else if (url.ToLower().EndsWith(".mp4"))
                                             {
                                                 response.ContentType = "video/mp4";
-                                                disableCacheControl = true;
                                             }
                                             else if (url.ToLower().EndsWith(".m3u8"))
                                             {
                                                 response.ContentType = "application/x-mpegURL";
-                                                disableCacheControl = true;
                                             }
                                             else if (url.ToLower().EndsWith(".ts"))
                                             {
                                                 response.ContentType = "video/mp2t";
-                                                disableCacheControl = true;
                                             }
                                             else if (url.ToLower().EndsWith(".appcache"))
                                             {
@@ -519,12 +518,11 @@ namespace MIG.Gateways
                                             {
                                                 // TODO: !IMPORTANT! exclude from caching files that contains SSI tags!
                                                 response.StatusCode = (int)HttpStatusCode.NotModified;
-                                                //!!DISABLED!! - The following line was preventing browser to load file from cache
-                                                //response.Headers.Set(HttpResponseHeader.Date, file.LastWriteTimeUtc.ToString().Replace(",", "."));
+                                                response.Headers.Set(HttpResponseHeader.Date, file.LastWriteTimeUtc.ToString("R"));
                                             }
                                             else
                                             {
-                                                response.Headers.Set(HttpResponseHeader.LastModified, file.LastWriteTimeUtc.ToString().Replace(",", "."));
+                                                response.Headers.Set(HttpResponseHeader.LastModified, file.LastWriteTimeUtc.ToString("R"));
                                                 if (disableCacheControl)
                                                 {
                                                     response.Headers.Set(HttpResponseHeader.CacheControl, "no-cache, no-store, must-revalidate");
@@ -569,7 +567,14 @@ namespace MIG.Gateways
                                                         response.ContentLength64 = file.Length;
                                                         using (var fileStream = file.OpenRead())
                                                         {
-                                                            fileStream.CopyTo(response.OutputStream);
+                                                            try
+                                                            {
+                                                                fileStream.CopyTo(response.OutputStream);
+                                                            }
+                                                            catch (HttpListenerException)
+                                                            {
+                                                                // client closed connection
+                                                            }
                                                         }
                                                     }
                                                     else
@@ -586,7 +591,7 @@ namespace MIG.Gateways
                                                             response.StatusCode = (int)HttpStatusCode.PartialContent;
                                                             response.ContentLength64 = contentLength;
                                                             response.Headers.Set("Content-Range", $"bytes {start}-{end}/{file.Length}");
-                                                            byte[] buffer = new byte[8192]; // Buffer da 8KB
+                                                            byte[] buffer = new byte[65536];
                                                             long bytesRemaining = contentLength;
                                                             using (var fileStream = file.OpenRead())
                                                             {
@@ -594,8 +599,16 @@ namespace MIG.Gateways
                                                                 int bytesRead;
                                                                 while (bytesRemaining > 0 && (bytesRead = fileStream.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesRemaining))) > 0)
                                                                 {
-                                                                    response.OutputStream.Write(buffer, 0, bytesRead);
-                                                                    bytesRemaining -= bytesRead;
+                                                                    try 
+                                                                    {
+                                                                        response.OutputStream.Write(buffer, 0, bytesRead);
+                                                                        bytesRemaining -= bytesRead;
+                                                                    }
+                                                                    catch (HttpListenerException)
+                                                                    {
+                                                                        // client closed connection
+                                                                        break;
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -665,9 +678,9 @@ namespace MIG.Gateways
                 }
                 try { response.Close(); } catch {
                     // TODO: add logging
-                }
-                try { response.Abort(); } catch {
-                    // TODO: add logging
+                    try { response.Abort(); } catch {
+                        // TODO: add logging
+                    }
                 }
             }
         }
@@ -794,7 +807,7 @@ namespace MIG.Gateways
             if (responseObject != null && responseObject.GetType().Equals(typeof(byte[])) == false)
             {
                 string responseText = "";
-                if (responseObject.GetType() == typeof(String))
+                if (responseObject is string)
                 {
                     responseText = responseObject.ToString();
                 }
