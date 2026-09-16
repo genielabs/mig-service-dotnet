@@ -184,7 +184,7 @@ namespace MIG.Gateways
                         isJsonPayload = true;
                     }
                 }
-                catch (Exception e)
+                catch
                 {
                     // Not valid JSON, process as text message
                 }

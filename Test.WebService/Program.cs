@@ -94,6 +94,10 @@ namespace Test.WebService
                     return null;
                 };
             }
+            web.SetOption(WebServiceGatewayOptions.HttpCacheIgnorePrefix + "1", @"\.mp4$");
+            web.SetOption(WebServiceGatewayOptions.HttpCacheIgnorePrefix + "2", @"\.webm$");
+            web.SetOption(WebServiceGatewayOptions.HttpCacheIgnorePrefix + "3", @"\.m3u8$");
+            web.SetOption(WebServiceGatewayOptions.HttpCacheIgnorePrefix + "4", @"\.ts$");
             web.SetOption(WebServiceGatewayOptions.EnableFileCaching, "False");
 
             // Add and configure the WebSocket gateway
