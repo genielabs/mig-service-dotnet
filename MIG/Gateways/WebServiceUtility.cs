@@ -22,9 +22,7 @@
  */
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -147,118 +145,89 @@ namespace MIG.Gateways
 
     public class MultipartParser
     {
-        public MultipartParser(byte[] data)
-        {   
-            this.Parse(data, Encoding.UTF8);
-        }
-
-        public MultipartParser(byte[] data, Encoding encoding)
-        {
-            this.Parse(data, encoding);
-        }
-
+        public MultipartParser(byte[] data) { Parse(data, Encoding.UTF8); }
+        public MultipartParser(byte[] data, Encoding encoding) { Parse(data, encoding); }
         private void Parse(byte[] data, Encoding encoding)
         {
-            this.Success = false;
+            Success = false;
+            ContentType = null;
+            Filename = null;
+            FileContents = null;
+            if (data == null || encoding == null) return;
 
-            // Copy to a string for header parsing
-            string content = encoding.GetString(data);
+            byte[] lineEnd = { 13, 10 };
+            byte[] headerEnd = { 13, 10, 13, 10 };
+            int delimiterEnd = IndexOf(data, lineEnd, 0);
+            if (delimiterEnd < 3 || data[0] != 45 || data[1] != 45) return;
 
-            // The first line should contain the delimiter
-            int delimiterEndIndex = content.IndexOf("\r\n");
+            byte[] boundary = new byte[delimiterEnd + 2];
+            boundary[0] = 13;
+            boundary[1] = 10;
+            Buffer.BlockCopy(data, 0, boundary, 2, delimiterEnd);
+            int partStart = delimiterEnd + 2;
+            var options = RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
 
-            if (delimiterEndIndex > -1)
+            while (partStart < data.Length)
             {
-                string delimiter = content.Substring(0, content.IndexOf("\r\n"));
+                int headersEnd = IndexOf(data, headerEnd, partStart);
+                if (headersEnd < 0) return;
+                int end = IndexOfBoundary(data, boundary, partStart);
+                if (end < 0 || headersEnd + headerEnd.Length > end) return;
 
-                // Look for Content-Type
-                Regex re = new Regex(@"(?<=Content\-Type:)(.*?)(?=\r\n\r\n)");
-                Match contentTypeMatch = re.Match(content);
+                string headers = encoding.GetString(data, partStart, headersEnd - partStart);
+                Match disposition = Regex.Match(headers,
+                    @"^Content-Disposition:[ \t]*([^\r\n]*)", options);
+                Match contentType = Regex.Match(headers,
+                    @"^Content-Type:[ \t]*([^\r\n]*)", options);
+                Match filename = Regex.Match(disposition.Value,
+                    @"(?:^|;)[ \t]*filename[ \t]*=[ \t]*""([^""]*)""",
+                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-                // Look for filename
-                re = new Regex(@"(?<=filename\=\"")(.*?)(?=\"")");
-                Match filenameMatch = re.Match(content);
-
-                // Did we find the required values?
-                if (contentTypeMatch.Success && filenameMatch.Success)
+                if (disposition.Success && contentType.Success && filename.Success)
                 {
-                    // Set properties
-                    this.ContentType = contentTypeMatch.Value.Trim();
-                    this.Filename = filenameMatch.Value.Trim();
-
-                    // Get the start & end indexes of the file contents
-                    int startIndex = contentTypeMatch.Index + contentTypeMatch.Length + "\r\n\r\n".Length;
-
-                    byte[] delimiterBytes = encoding.GetBytes("\r\n" + delimiter);
-                    int endIndex = IndexOf(data, delimiterBytes, startIndex);
-
-                    int contentLength = endIndex - startIndex;
-
-                    // Extract the file contents from the byte array
-                    byte[] fileData = new byte[contentLength];
-
-                    Buffer.BlockCopy(data, startIndex, fileData, 0, contentLength);
-
-                    this.FileContents = fileData;
-                    this.Success = true;
+                    int start = headersEnd + headerEnd.Length;
+                    byte[] fileData = new byte[end - start];
+                    Buffer.BlockCopy(data, start, fileData, 0, fileData.Length);
+                    ContentType = contentType.Groups[1].Value.Trim();
+                    Filename = filename.Groups[1].Value.Trim();
+                    FileContents = fileData;
+                    Success = true;
+                    return;
                 }
+
+                int suffix = end + boundary.Length;
+                if (data[suffix] == 45 && data[suffix + 1] == 45) return;
+                partStart = suffix + 2;
             }
         }
-
-        private int IndexOf(byte[] searchWithin, byte[] serachFor, int startIndex)
+        private int IndexOfBoundary(byte[] data, byte[] boundary, int start)
         {
-            int index = 0;
-            int startPos = Array.IndexOf(searchWithin, serachFor[0], startIndex);
-
-            if (startPos != -1)
+            int index = IndexOf(data, boundary, start);
+            while (index >= 0)
             {
-                while ((startPos + index) < searchWithin.Length)
-                {
-                    if (searchWithin[startPos + index] == serachFor[index])
-                    {
-                        index++;
-                        if (index == serachFor.Length)
-                        {
-                            return startPos;
-                        }
-                    }
-                    else
-                    {
-                        startPos = Array.IndexOf<byte>(searchWithin, serachFor[0], startPos + index);
-                        if (startPos == -1)
-                        {
-                            return -1;
-                        }
-                        index = 0;
-                    }
-                }
+                int suffix = index + boundary.Length;
+                if (suffix + 1 < data.Length &&
+                    ((data[suffix] == 13 && data[suffix + 1] == 10) ||
+                     (data[suffix] == 45 && data[suffix + 1] == 45)))
+                    return index;
+                index = IndexOf(data, boundary, index + 1);
             }
-
             return -1;
         }
-
-        public bool Success
+        private int IndexOf(byte[] data, byte[] value, int start)
         {
-            get;
-            private set;
+            if (data == null || value == null || value.Length == 0 || start < 0) return -1;
+            for (int i = start; i <= data.Length - value.Length; i++)
+            {
+                int j = 0;
+                while (j < value.Length && data[i + j] == value[j]) j++;
+                if (j == value.Length) return i;
+            }
+            return -1;
         }
-
-        public string ContentType
-        {
-            get;
-            private set;
-        }
-
-        public string Filename
-        {
-            get;
-            private set;
-        }
-
-        public byte[] FileContents
-        {
-            get;
-            private set;
-        }
+        public bool Success { get; private set; }
+        public string ContentType { get; private set; }
+        public string Filename { get; private set; }
+        public byte[] FileContents { get; private set; }
     }
 }
